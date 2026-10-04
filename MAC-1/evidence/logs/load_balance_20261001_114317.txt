@@ -1,0 +1,12 @@
+=== LOAD BALANCING EVIDENCE ===
+Timestamp: Thu Oct  1 11:44:02 IST 2026
+
+Sending 6 requests to https://app.team1.test/api/status
+Watch X-Backend header alternate between A and B:
+
+Request 1: 
+Request 2: 
+Request 3: 
+Request 4: 
+Request 5: 
+Request 6: 

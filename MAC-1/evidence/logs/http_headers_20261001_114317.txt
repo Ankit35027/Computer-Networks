@@ -1,0 +1,6 @@
+=== HTTP HEADERS EVIDENCE ===
+Timestamp: Thu Oct  1 11:44:02 IST 2026
+
+--- First request (cache miss): ---
+
+--- Second request (may return 304): ---

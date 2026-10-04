@@ -1,0 +1,15 @@
+=== CURL VERBOSE EVIDENCE ===
+Timestamp: Thu Oct  1 11:44:02 IST 2026
+
+Command: curl -v https://app.team1.test/api/status
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Could not resolve host: app.team1.test
+* Closing connection
+curl: (6) Could not resolve host: app.team1.test
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Could not resolve host: app.team1.test
+* Closing connection
+curl: (6) Could not resolve host: app.team1.test
