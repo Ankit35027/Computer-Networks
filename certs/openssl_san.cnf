@@ -1,0 +1,37 @@
+[ req ]
+default_bits        = 2048
+default_md          = sha256
+prompt              = no
+distinguished_name  = req_distinguished_name
+req_extensions      = req_ext
+x509_extensions     = v3_ca
+
+[ req_distinguished_name ]
+C                   = US
+ST                  = California
+L                   = Local Network
+O                   = Computer Networks Project
+OU                  = Team 1 Edge Gateway
+CN                  = app.team1.test
+
+[ req_ext ]
+subjectAltName      = @alt_names
+
+[ v3_req ]
+basicConstraints    = CA:FALSE
+keyUsage            = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage    = serverAuth
+subjectAltName      = @alt_names
+
+[ v3_ca ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ alt_names ]
+DNS.1               = app.team1.test
+DNS.2               = api.team1.test
+DNS.3               = team1.test
+DNS.4               = *.team1.test
+IP.1                = 127.0.0.1

@@ -1,0 +1,43 @@
+==================================================
+ Phase 1 Comprehensive Automated Verification Suite
+ Target Domain: app.team1.test (https://app.team1.test:8443)
+==================================================
+
+[TEST 1/5] Testing Private DNS Resolution...
+  dig app.team1.test output: Resolved locally or via /etc/hosts
+
+[TEST 2/5] Testing HTTPS / TLS Connection with CA Certificate (No -k flag)...
+  [PASS] TLS Handshake verified and Certificate trusted!
+
+[TEST 3/5] Testing Load Balancing across Backend A and Backend B (10 Requests)...
+--------------------------------------------------
+Req # | Target URL            | HTTP Code | Upstream Backend (X-Backend)
+--------------------------------------------------
+  1   | https://app.team1.test:8443 |   200     | X-Backend: B
+  2   | https://app.team1.test:8443 |   200     | X-Backend: B
+  3   | https://app.team1.test:8443 |   200     | X-Backend: A
+  4   | https://app.team1.test:8443 |   200     | X-Backend: A
+  5   | https://app.team1.test:8443 |   200     | X-Backend: A
+  6   | https://app.team1.test:8443 |   200     | X-Backend: B
+  7   | https://app.team1.test:8443 |   200     | X-Backend: A
+  8   | https://app.team1.test:8443 |   200     | X-Backend: A
+  9   | https://app.team1.test:8443 |   200     | X-Backend: B
+ 10   | https://app.team1.test:8443 |   200     | X-Backend: B
+--------------------------------------------------
+ Load Balancing Summary: Backend A = 5, Backend B = 5
+  [PASS] Load Balancing successfully serving requests from both backends!
+
+[TEST 4/5] Testing HTTP Caching (Cache-Control & ETag / 304 Not Modified)...
+  Initial Request Headers:
+    - cache-control: public, max-age=60
+    - ETag: "8c6540340ce1e7794ebd1b527e03610a"
+  Sending Conditional Request with Header 'If-None-Match: "8c6540340ce1e7794ebd1b527e03610a"'...
+  Conditional Request Status: HTTP/2 304 
+  [PASS] HTTP 304 Not Modified validated! Client caching confirmed.
+
+[TEST 5/5] Testing HTTP/2 Protocol Negotiation...
+  Protocol Response Line: HTTP/2 200 
+
+==================================================
+ Verification Complete. Test logs saved in evidence/test_logs/
+==================================================

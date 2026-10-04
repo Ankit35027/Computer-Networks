@@ -1,0 +1,51 @@
+==================================================
+ Section 6.3 Mandatory Failure Scenarios Simulation
+==================================================
+
+[SCENARIO 1] Wrong DNS Server configured on client
+  Action: Attempting DNS resolution against invalid DNS IP (192.0.2.1)...
+
+; <<>> DiG 9.10.6 <<>> @192.0.2.1 app.team1.test +time=2 +tries=1
+; (1 server found)
+;; global options: +cmd
+;; connection timed out; no servers could be reached
+  Explanation: Name lookup fails due to unreachability of DNS server. Demonstrates that DNS layer is independent from direct IP connectivity.
+
+[SCENARIO 2] DNS record points to a wrong IP address
+  Action: Attempting HTTP connection to incorrect destination IP (192.0.2.50)...
+*   Trying 192.0.2.50:8080...
+* ipv4 connect timeout after 1998ms, move on!
+* Failed to connect to 192.0.2.50 port 8080 after 2002 ms: Timeout was reached
+* Closing connection
+  Explanation: DNS lookup succeeds but client attempts connection to wrong IP. Demonstrates DNS is a lookup directory, not a connection.
+
+[SCENARIO 3] One backend (Backend A on port 3001) is stopped
+  Action: Stopping Backend A while leaving Backend B running...
+  Testing Nginx failover to remaining healthy backend (Backend B)...
+HTTP/2 200 
+HTTP/2 200 
+HTTP/2 200 
+  Explanation: Nginx detects port 3001 connection failure and routes requests to Backend B seamlessly.
+
+[SCENARIO 4] Both backends (Backend A & B) are stopped
+  Action: Stopping Backend B on port 3002...
+  Sending HTTPS request to Nginx edge...
+HTTP/2 502 
+  Explanation: Returns '502 Bad Gateway'. DNS & TLS succeed at edge Nginx layer, but edge cannot reach upstream backends.
+
+[SCENARIO 5] Wrong destination port on client
+  Action: Attempting HTTPS request on closed port 9999...
+*   Trying 127.0.0.1:9999...
+* connect to 127.0.0.1 port 9999 from 127.0.0.1 port 49598 failed: Connection refused
+* Failed to connect to 127.0.0.1 port 9999 after 0 ms: Couldn't connect to server
+* Closing connection
+  Explanation: Host is reachable, but TCP connection to port 9999 is refused. Demonstrates IP addresses and TCP port numbers operate at distinct layers.
+
+Restarting backend servers to restore normal state...
+Starting Backend Server A (Port 3001)...
+Backend A running (PID: 7322)
+Starting Backend Server B (Port 3002)...
+Backend B running (PID: 7324)
+==================================================
+ Failure Demonstrations Simulation Complete.
+==================================================
