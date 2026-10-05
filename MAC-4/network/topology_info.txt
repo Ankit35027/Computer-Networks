@@ -1,0 +1,72 @@
+================================================================================
+COMPUTER NETWORKS COURSE PROJECT - PHASE 1
+NETWORK TOPOLOGY & SERVICE MAP (TEAM LIVE CONFIGURATION)
+================================================================================
+
+TOPOLOGY DIAGRAM:
+
+                    [ Private Wi-Fi / LAN Subnet: 10.7.0.0/19 ]
+                                        │
+         ┌──────────────────────────────┼──────────────────────────────┐
+         │                              │                              │
+         ▼                              ▼                              ▼
+    ┌──────────────┐             ┌──────────────┐             ┌──────────────┐
+    │    Mac 1     │             │    Mac 2     │             │    Mac 3     │
+    │  DNS Server  │             │ Edge / Nginx │             │  Backend A   │
+    │ 10.7.21.249  │             │ 10.7.23.158  │             │  10.7.22.2   │
+    │ dnsmasq (53) │             │  Port 80/443 │             │  Port 3001   │
+    └──────────────┘             └──────┬───────┘             └──────────────┘
+         ▲                              │                            ▲
+         │ DNS Query                    │ Upstream Reverse Proxy     │
+         │ (UDP 53)                     │ (Port 3001 & 3002)         │
+         │                              │                            │
+    ┌────┴──────────────────────────────┼────────────────────────────┴───┐
+    │                                   ▼                                │
+    │                                 Mac 4                              │
+    │                    (Backend Server B + Test Client)                │
+    │                              10.7.21.68                            │
+    │                                                                    │
+    │   • Backend Server B: TCP Port 3002 (X-Backend: B)                 │
+    │   • Test Client: curl / browser / Wireshark                        │
+    │   • Subnet Mask: 255.255.224.0 | Gateway: 10.7.0.1 | MAC: en0      │
+    └────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+TEAM MACHINE ROLE AND SERVICE INVENTORY:
+--------------------------------------------------------------------------------
+
+Role: Mac 1
+  Machine Role  : Private DNS Server + Test Client
+  IPv4 Address  : 10.7.21.249
+  Key Services  : dnsmasq (UDP/TCP 53)
+  Config Records: app.team1.test -> 10.7.23.158, api.team1.test -> 10.7.23.158
+  Cloud Equiv   : Amazon Route 53 / CoreDNS
+
+Role: Mac 2
+  Machine Role  : Edge / Reverse Proxy + Load Balancer
+  IPv4 Address  : 10.7.23.158
+  Key Services  : Nginx (TCP 443 / 8443), OpenSSL Root CA / TLS Termination
+  Upstream Pool : 10.7.22.2:3001 (Backend A), 10.7.21.68:3002 (Backend B)
+  Balancing Algo: Round-Robin
+  Cloud Equiv   : AWS Application Load Balancer (ALB)
+
+Role: Mac 3
+  Machine Role  : Backend Server A
+  IPv4 Address  : 10.7.22.2
+  Key Services  : HTTP REST API (TCP port 3001)
+  Response Hdr  : X-Backend: A
+  Cloud Equiv   : EC2 Instance / Kubernetes Pod A
+
+Role: Mac 4 (THIS MACHINE)
+  Machine Role  : Backend Server B + Test Client
+  IPv4 Address  : 10.7.21.68
+  Subnet Mask   : 255.255.224.0 (/19)
+  Gateway       : 10.7.0.1
+  Interface     : en0 (Wi-Fi)
+  Key Services  :
+    - Backend B : Python REST API on TCP port 3002 (0.0.0.0)
+    - Response  : X-Backend: B
+    - Endpoints : GET /, GET /api/status, GET /cached
+    - Test Client: curl, dig, Wireshark, system DNS resolver
+  Cloud Equiv   : EC2 Instance / Kubernetes Pod B + Client Consumer
+================================================================================
