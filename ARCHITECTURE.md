@@ -9,10 +9,10 @@ The system is deployed locally on a dedicated private LAN subnet (`10.7.0.0/19`)
 
 | Machine Directory | LAN IPv4 | Bound Ports | Phase 1 Role | Phase 2 Extensions | Cloud Equivalent |
 |---|---|---|---|---|---|
-| **[`MAC-1/`](MAC-1/)** | `10.7.21.249` | `53/UDP`, `53/TCP` | Primary Authoritative & Recursive DNS Resolver | Primary DNS Service Lifecycle Controller | AWS Route 53 / CoreDNS |
-| **[`MAC-2/`](MAC-2/)** | `10.7.23.158` | `8443/TCP`, `80/TCP` | Edge Reverse Proxy & Upstream Load Balancer (TLS 1.3) | Nginx HA Passive Health Checking & Ejection | AWS Application Load Balancer |
-| **[`MAC-3/`](MAC-3/)** | `10.7.22.2` | `3001/TCP`, `53/UDP`, `8443/TCP` | Upstream Application Backend Server A | **Ext A**: Backup DNS<br/>**Ext C**: PF Service Isolation<br/>**Ext E**: Standby Edge Gateway | AWS EC2 Node + Standby Load Balancer |
-| **[`MAC-4/`](MAC-4/)** | `10.7.21.68` | `3002/TCP` | Upstream Application Backend Server B + Test Client | **Ext C**: PF Service Isolation<br/>Primary Evaluation Client Node | AWS EC2 Node + Client Workstation |
+| **[`MAC-1/`](MAC-1/)** | `10.7.5.14` | `53/UDP`, `53/TCP` | Primary Authoritative & Recursive DNS Resolver | Primary DNS Service Lifecycle Controller | AWS Route 53 / CoreDNS |
+| **[`MAC-2/`](MAC-2/)** | `10.7.31.100` | `8443/TCP`, `8080/TCP` | Edge Reverse Proxy & Upstream Load Balancer (TLS 1.3) | Nginx HA Passive Health Checking & Ejection | AWS Application Load Balancer |
+| **[`MAC-3/`](MAC-3/)** | `10.7.13.57` | `3001/TCP`, `53/UDP`, `8443/TCP` | Upstream Application Backend Server A | **Ext A**: Backup DNS<br/>**Ext C**: PF Service Isolation<br/>**Ext E**: Standby Edge Gateway | AWS EC2 Node + Standby Load Balancer |
+| **[`MAC-4/`](MAC-4/)** | `10.7.17.220` | `3002/TCP` | Upstream Application Backend Server B + Test Client | **Ext C**: PF Service Isolation<br/>Primary Evaluation Client Node | AWS EC2 Node + Client Workstation |
 
 - **Subnet Range**: `10.7.0.0/19` (Netmask: `255.255.224.0`)
 - **Default Gateway**: `10.7.0.1`
@@ -21,6 +21,10 @@ The system is deployed locally on a dedicated private LAN subnet (`10.7.0.0/19`)
 
 ---
 
+
+> **IP addresses (current, 23–24 Nov 2026)** come from campus DHCP and are kept in [`team.env`](team.env), the single source of truth. Phase 1 evidence from 4 Oct 2026 shows the older leases (Mac 1 `10.7.21.249`, Mac 2 `10.7.23.158`, Mac 3 `10.7.22.2`, Mac 4 `10.7.21.68`). Run `./scripts/check_ips.sh` after any IP change.
+> Phase 2 results and evidence: [`docs/PHASE2_REPORT.md`](docs/PHASE2_REPORT.md) · troubleshooting: [`docs/EXT_F_TROUBLESHOOTING_RUNBOOK.md`](docs/EXT_F_TROUBLESHOOTING_RUNBOOK.md) · demo: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md).
+
 ## 2. Comprehensive Network Topology Diagram
 
 ```mermaid
@@ -28,15 +32,15 @@ flowchart TD
     subgraph LAN ["Campus Private LAN Subnet (10.7.0.0/19)"]
         Router["LAN Gateway / Router<br/>10.7.0.1"]
 
-        subgraph M1 ["MAC-1 (10.7.21.249)"]
+        subgraph M1 ["MAC-1 (10.7.5.14)"]
             DNS1["Primary DNS Resolver<br/>dnsmasq (Port 53 UDP/TCP)<br/>TTL: 30s"]
         end
 
-        subgraph M2 ["MAC-2 (10.7.23.158)"]
+        subgraph M2 ["MAC-2 (10.7.31.100)"]
             EdgeProxy["Edge Reverse Proxy & Load Balancer<br/>Nginx 1.31.6 (Port 8443 TLS 1.3)<br/>Passive Health Checking (max_fails=1)"]
         end
 
-        subgraph M3 ["MAC-3 (10.7.22.2)"]
+        subgraph M3 ["MAC-3 (10.7.13.57)"]
             DNS2["Extension A: Backup DNS Resolver<br/>dnsmasq (Port 53)"]
             PF3["Extension C: PF Firewall<br/>(Block direct 3001 except from Mac 2)"]
             BackendA["Backend Server A<br/>Node.js REST API (Port 3001)<br/>Header: X-Backend: A"]
@@ -45,7 +49,7 @@ flowchart TD
             PF3 -.-> BackendA
         end
 
-        subgraph M4 ["MAC-4 (10.7.21.68)"]
+        subgraph M4 ["MAC-4 (10.7.17.220)"]
             PF4["Extension C: PF Firewall<br/>(Block direct 3002 except from Mac 2)"]
             BackendB["Backend Server B<br/>Node.js REST API (Port 3002)<br/>Header: X-Backend: B"]
             ClientNode["Evaluation Client Node<br/>curl, dig, Wireshark, Browser"]
@@ -93,7 +97,7 @@ sequenceDiagram
 
     Note over Client,DNS: Step 1: DNS Resolution (UDP 53)
     Client->>DNS: Standard query A app.team1.test
-    DNS-->>Client: Standard query response: 10.7.23.158 (TTL: 30s)
+    DNS-->>Client: Standard query response: 10.7.31.100 (TTL: 30s)
 
     Note over Client,Edge: Step 2: TCP 3-Way Handshake (TCP 8443)
     Client->>Edge: [SYN] (Src Ephemeral Port: >49152, Dst Port: 8443)
@@ -109,10 +113,10 @@ sequenceDiagram
     Note over Client,B_B: Step 4: HTTP Request & Round-Robin Load Balancing
     Client->>Edge: GET /api/status (HTTP/2 Encrypted)
     alt Request #1, #3 (Round-Robin)
-        Edge->>B_B: Forward HTTP GET to 10.7.21.68:3002
+        Edge->>B_B: Forward HTTP GET to 10.7.17.220:3002
         B_B-->>Edge: HTTP 200 OK {"backend":"B"} (X-Backend: B)
     else Request #2, #4 (Round-Robin)
-        Edge->>B_A: Forward HTTP GET to 10.7.22.2:3001
+        Edge->>B_A: Forward HTTP GET to 10.7.13.57:3001
         B_A-->>Edge: HTTP 200 OK {"backend":"A"} (X-Backend: A)
     end
     Edge-->>Client: HTTP/2 200 OK (Encrypted Application Data Response)
@@ -132,20 +136,20 @@ sequenceDiagram
 
     Note over DNS1: Primary DNS is Terminated (Outage)
     Client->>DNS1: DNS Query app.team1.test (Timeout)
-    Client->>DNS2: Failover Query to Backup DNS (10.7.22.2:53)
-    DNS2-->>Client: Response: 10.7.23.158 (Ext A: Seamless DNS Failover)
+    Client->>DNS2: Failover Query to Backup DNS (10.7.13.57:53)
+    DNS2-->>Client: Response: 10.7.31.100 (Ext A: Seamless DNS Failover)
 
     Note over B_A: Backend A (Port 3001) Crashes
     Client->>Edge: GET /api/status
-    Edge->>B_A: Proxy Pass to 10.7.22.2:3001 (Connection Refused!)
+    Edge->>B_A: Proxy Pass to 10.7.13.57:3001 (Connection Refused!)
     Note over Edge: Nginx detects failure (proxy_next_upstream)
-    Edge->>B_B: Instant Transparent Retry to 10.7.21.68:3002
+    Edge->>B_B: Instant Transparent Retry to 10.7.17.220:3002
     B_B-->>Edge: HTTP 200 OK (X-Backend: B)
     Edge-->>Client: HTTP/2 200 OK (Ext D: Zero Client Downtime!)
 
     Note over Client,B_A: Extension C: Direct Client Access Attempt
-    Client->>B_A: GET http://10.7.22.2:3001/api/status
-    Note over B_A: PF Firewall drops packet (not from 10.7.23.158)
+    Client->>B_A: GET http://10.7.13.57:3001/api/status
+    Note over B_A: PF Firewall drops packet (not from 10.7.31.100)
     B_A--xClient: Connection Refused / Timed Out (Service Isolation)
 ```
 
@@ -167,9 +171,9 @@ sequenceDiagram
 
 ## 5. Phase 2 Resilience Architecture Reference
 
-- **Extension A (Backup DNS)**: Client resolver table configured with Primary (`10.7.21.249`) and Backup (`10.7.22.2`). Transparent name resolution continuity upon Primary crash.
+- **Extension A (Backup DNS)**: Client resolver table configured with Primary (`10.7.5.14`) and Backup (`10.7.13.57`). Transparent name resolution continuity upon Primary crash.
 - **Extension B (DNS TTL & Cache Control)**: Authoritative TTL configured to `30s`. Client-side caching behavior and manual cache invalidation via `dscacheutil -flushcache`.
-- **Extension C (Service Isolation)**: macOS Packet Filter (`pfctl`) deployed on Mac 3 and Mac 4, strictly isolating backend application ports to accept traffic exclusively from Mac 2 (`10.7.23.158`).
+- **Extension C (Service Isolation)**: macOS Packet Filter (`pfctl`) deployed on Mac 3 and Mac 4, strictly isolating backend application ports to accept traffic exclusively from Mac 2 (`10.7.31.100`).
 - **Extension D (High-Availability Failover)**: Nginx upstream cluster configured with `max_fails=1 fail_timeout=3s` and `proxy_next_upstream error timeout http_502`. Immediate automatic retry prevents dropped requests.
 - **Extension E (Controlled Edge Migration)**: Standby Edge proxy configured on Mac 3; DNS authoritative record shifted to enable blue/green infrastructure cutover.
 - **Extension F (Fault Troubleshooting Runbook)**: Layer-by-layer isolation script (`troubleshoot_fault.sh`) identifying DNS, TCP, TLS, or Application failures during faculty-injected fault challenges.

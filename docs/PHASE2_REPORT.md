@@ -1,156 +1,194 @@
-# Computer Networks Course Project — Phase 2 Final Report
-## Phase 2: Harden, Recover, and Troubleshoot
-**Project Title**: Private Network Service Platform — Resilience, Isolation & Failover  
-**Team**: Team 1  
-**Target Domain**: `app.team1.test` | `api.team1.test` | `team1.test`  
-**Network Subnet**: `10.7.0.0/19` (Netmask: `255.255.224.0`, Gateway: `10.7.0.1`)  
+# Phase 2 Final Report: Harden, Recover, and Troubleshoot
+**Team 1 · Private Network Service Platform · `app.team1.test`**
+Tests run live on the 4 team Macs, 23–24 Nov 2026, campus Wi-Fi `10.7.0.0/19` (gateway `10.7.0.1`).
+Every result below is backed by a log, pcap or screenshot; the file is named in each section.
+Screenshot index: [`evidence/screenshots/README.md`](../evidence/screenshots/README.md).
 
 ---
 
-## 1. Executive Summary & Architecture Evolution
+## 1. What changed from Phase 1
 
-In **Phase 1 (Build & Observe)**, the team established a fully operational private local service platform across four physical macOS machines, proving private DNS resolution, TLS 1.3 termination, round-robin load balancing across two independent backends, HTTP/2 multiplexing, and HTTP conditional caching (ETag / 304 Not Modified).
+| Area | Phase 1 | Phase 2 |
+|---|---|---|
+| IP management | IPs hard-coded in ~30 files; DHCP changed them between sessions | **`team.env`** holds the four IPs in one place; scripts read it; `scripts/check_ips.sh` flags any config that disagrees |
+| DNS | one dnsmasq on Mac 1 | + **backup dnsmasq on Mac 3** with identical records; clients list both (Ext A) |
+| Edge | one nginx on Mac 2 | + **standby nginx on Mac 3**, same certificate and same backend pool; `X-Edge` header shows which edge answered (Ext E) |
+| Load balancer | round-robin, per-worker state (uneven `A A A B B A`) | `zone backend_cluster 1m;` gives shared state → strict A/B alternation and consistent failover (Ext D) |
+| Backends | reachable directly by any client | **pf firewall anchor** on Mac 3 / Mac 4: only the edge(s) may connect (Ext C) |
+| Caching | 304 worked only on Backend A (different ETag on B) | identical `/cached` body and ETag on both backends; Backend B gained `HEAD` support (`curl -I` returned 501 before) |
+| TLS trust | Mac 4 trusted the server leaf cert; demos used `-k` / `--cacert` | Mac 4 and Mac 1 trust the **Root CA** in the System keychain; plain `curl https://app.team1.test:8443` verifies |
+| Troubleshooting | script fell back to `127.0.0.1` and `-k` | `scripts/diagnose.sh` (L0→DNS→TCP→TLS→HTTP, LAN-aware) + [runbook](EXT_F_TROUBLESHOOTING_RUNBOOK.md) |
 
-In **Phase 2 (Harden, Recover, and Troubleshoot)**, the system was hardened against single-point-of-failure risks, unauthorized network access, and unexpected service crashes. Rather than rebuilding the platform from scratch, production-grade resilience mechanisms were implemented across multiple protocol layers:
-1. **DNS Layer**: Multi-resolver redundancy and TTL-governed traffic migration (Extensions A & B).
-2. **Network / Security Layer**: Ingress service isolation using macOS Packet Filter (`pf`) rules (Extension C).
-3. **Application / Transport Layer**: Upstream passive health monitoring, transparent HTTP retry, and standby edge migration (Extensions D & E).
-4. **Diagnostic Layer**: Systematic OSI layer-by-layer troubleshooting framework for faculty-injected fault isolation (Extension F).
+### Final topology
 
----
-
-## 2. Machine Roles & Infrastructure Inventory
-
-| Machine Folder | Hardware Role | LAN IPv4 | Bound Ports | Core Services Running | Resilience Extension |
-|---|---|---|---|---|---|
-| **`MAC-1/`** | Primary DNS Server & Client | `10.7.21.249` | `53/UDP`, `53/TCP` | `dnsmasq` v2.90, `dig`, `curl` | Primary DNS Lifecycle Control |
-| **`MAC-2/`** | Edge Reverse Proxy & Load Balancer | `10.7.23.158` | `8443/TCP`, `80/TCP` | `nginx` v1.31.6 + TLS 1.3 | **Ext D**: Upstream Passive Health Monitoring |
-| **`MAC-3/`** | Upstream Backend A, Backup DNS & Standby Edge | `10.7.22.2` | `3001/TCP`, `53/UDP`, `8443/TCP` | Node.js REST API (`server.js`), `dnsmasq`, `nginx` | **Ext A**: Backup DNS<br/>**Ext C**: PF Isolation<br/>**Ext E**: Standby Edge |
-| **`MAC-4/`** | Upstream Backend B & Primary Client Node | `10.7.21.68` | `3002/TCP` | Node.js / Python REST API, Evaluation Client Suite | **Ext C**: PF Isolation<br/>Client Demonstration Controller |
-
----
-
-## 3. Detailed Results of Phase 2 Extensions
-
-### 3.1 Extension A: Backup DNS Resolver
-- **Implementation**:
-  - A secondary `dnsmasq` instance was configured and deployed on Mac 3 (`10.7.22.2`) with authoritative records identical to Mac 1 (`app.team1.test -> 10.7.23.158`).
-  - Client Mac 4's macOS network resolver was configured with both nameservers using `networksetup`:
-    ```bash
-    sudo networksetup -setdnsservers Wi-Fi 10.7.21.249 10.7.22.2
-    ```
-- **Resilience Test & Verification**:
-  1. Sent baseline query: Resolved via Primary DNS (`10.7.21.249`).
-  2. Terminated `dnsmasq` on Mac 1 (`sudo pkill dnsmasq`).
-  3. Re-sent query from client: The client resolver automatically fell back to the secondary DNS on Mac 3 (`10.7.22.2`), returning `10.7.23.158` with zero failure.
-- **Viva Key Insight**:
-  - *DNS Service Failure vs Application Server Failure*: A DNS failure halts name-to-IP resolution before any TCP handshake can begin (client sees `SERVFAIL` or `NXDOMAIN`). An application server failure occurs after successful DNS resolution and TLS establishment, producing an HTTP status code (`502 Bad Gateway` or `504 Gateway Timeout`).
-
----
-
-### 3.2 Extension B: DNS TTL and Controlled Record Change
-- **Implementation**:
-  - Configured a short, visible TTL of 30 seconds (`local-ttl=30`) in `dnsmasq.conf`.
-  - Simulating controlled IP cutover by changing the A record of `app.team1.test` to point to `10.7.22.2` (Standby Edge).
-- **Resilience Test & Verification**:
-  1. Client queried `app.team1.test`: DNS response returned `TTL: 30`.
-  2. Updated record on DNS server and executed `kill -HUP $(pgrep dnsmasq)`.
-  3. Client immediately queried again: Operating system returned the cached IP address for the duration of the remaining TTL window.
-  4. Executed manual cache flush:
-     ```bash
-     sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
-     ```
-  5. Subsequent query immediately returned the new IP address.
-- **Viva Key Insight**:
-  - *TTL Engineering Trade-offs*: Low TTL (30s) enables rapid cutover during outages or blue-green deployments at the cost of higher query volume to authoritative nameservers. High TTL (e.g. 86400s) minimizes DNS server load and lookup latency, but introduces caching inertia that delays emergency traffic rerouting.
-
----
-
-### 3.3 Extension C: Service Isolation (Backend Firewall Rules)
-- **Implementation**:
-  - Configured macOS Packet Filter (`pfctl`) rules on Mac 3 (`configs/pf_backend_isolation.conf`) and Mac 4 to restrict direct incoming TCP connections to backend ports `3001` and `3002`.
-  - Rules explicitly allow traffic originating from Mac 2 Edge Proxy (`10.7.23.158`) while dropping or resetting direct requests from any other LAN host:
-    ```pf
-    ext_if = "en0"
-    edge_proxy = "10.7.23.158"
-    backend_port = "3001"
-    pass in quick on $ext_if proto tcp from $edge_proxy to any port $backend_port
-    block in quick on $ext_if proto tcp from any to any port $backend_port
-    ```
-- **Resilience Test & Verification**:
-  - *Direct Client Access*: Client Mac 4 executed `curl http://10.7.22.2:3001/api/status` → **Connection Refused / Timed Out**.
-  - *Edge-Routed Access*: Client Mac 4 executed `curl https://app.team1.test:8443/api/status` → **200 OK** (Proxy routed request successfully).
-- **Viva Key Insight**:
-  - *Defense-in-Depth & Least Privilege*: Direct exposure of backend ports exposes unencrypted HTTP traffic, circumvents edge authentication, and bypasses reverse proxy rate-limiting. Service isolation ensures all ingress traffic is forced through TLS inspection and Edge proxy controls.
-
----
-
-### 3.4 Extension D: High-Availability Failover Behavior
-- **Implementation**:
-  - Enhanced Nginx upstream load-balancing pool with passive health check directives and automated next-upstream retries:
-    ```nginx
-    upstream backend_cluster {
-        server 10.7.22.2:3001 max_fails=1 fail_timeout=3s;
-        server 10.7.21.68:3002 max_fails=1 fail_timeout=3s;
-    }
-    proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
-    proxy_next_upstream_tries 2;
-    proxy_next_upstream_timeout 3s;
-    ```
-- **Resilience Test & Verification**:
-  1. Continuous traffic stream sent to `https://app.team1.test:8443/api/status`: Verified alternation between `X-Backend: A` and `X-Backend: B`.
-  2. Terminated Backend A on Mac 3 (`pkill -f "node server.js"`).
-  3. Client stream showed 100% successful responses (`HTTP 200 OK`) serviced entirely by Backend B (`X-Backend: B`) with zero dropped requests.
-  4. Restarted Backend A on Mac 3: Nginx restored Backend A to the active rotation automatically within 3 seconds.
-- **Viva Key Insight**:
-  - *Single Point of Failure (SPOF) Analysis*: While backend applications have full failover redundancy, the Edge Proxy on Mac 2 remains an architectural SPOF. In production, this is eliminated using Virtual IP (VIP) clustering with VRRP (`keepalived`), BGP Anycast routing, or DNS Round-Robin with automated health checking.
-
----
-
-### 3.5 Extension E: Controlled Edge Migration (DNS-Based Cutover)
-- **Implementation**:
-  - Pre-configured standby Nginx edge proxy on Mac 3 listening on port `8443` with identical SAN TLS certificates.
-  - Performed DNS cutover by changing authoritative A record: `app.team1.test` → `10.7.22.2`.
-- **Resilience Test & Verification**:
-  - Verified traffic shift from Mac 2 to Mac 3 without changing client application code or hardware connections.
-- **Viva Key Insight**:
-  - Mirrors production blue/green routing and data center evacuation procedures.
-
----
-
-### 3.6 Extension F: Faculty-Injected Troubleshooting Challenge
-- **Implementation**:
-  - Developed automated diagnostic script [`MAC-2/scripts/troubleshoot_fault.sh`](file:///Users/kchhillar13/me/Computer-Networks/MAC-2/scripts/troubleshoot_fault.sh) implementing a disciplined top-down / bottom-up OSI diagnostic flow.
-- **Diagnostic Decision Matrix**:
-
-| Layer | Inspection Tool | Expected Healthy Output | Symptom of Injected Fault | Root Cause & Resolution |
-|---|---|---|---|---|
-| **Layer 3 (IP)** | `ping -c 2 10.7.23.158` | 0% packet loss | Host Unreachable / 100% loss | Wi-Fi disconnected or wrong IP subnet |
-| **Layer 7 (DNS)** | `dig +short app.team1.test` | Returns `10.7.23.158` | Empty / `connection timed out` | dnsmasq stopped or client pointing to wrong DNS |
-| **Layer 4 (TCP)** | `nc -zv 10.7.23.158 8443` | Connection to port 8443 succeeded | Connection refused / timed out | Nginx stopped or port blocked by firewall |
-| **Layer 6 (TLS)** | `openssl s_client -connect ...` | `Verify return code: 0 (ok)` | Certificate expired / untrusted CA | Missing CA in keychain or expired cert |
-| **Layer 7 (App)** | `curl -i https://app.team1.test:8443` | `HTTP/2 200 OK` | `HTTP/2 502 Bad Gateway` | Both backends (3001 & 3002) are stopped |
-
----
-
-## 4. Phase 2 Demonstration Checklist (Review 2 Sequence)
-
-| Step # | Evaluation Demonstration | Target Machine | Verified Execution Command |
+| Mac | IP | Services (Phase 2) | Ports |
 |---|---|---|---|
-| **1** | Multi-Machine Topology & Roles | All | Display `ARCHITECTURE.md` |
-| **2** | LAN Ping Reachability | Mac 4 | `./network/ping_team.sh` |
-| **3** | Primary & Backup DNS Resolution | Mac 4 | `./client/test_phase2_backup_dns.sh` |
-| **4** | HTTPS Service over Private Domain | Mac 4 | `curl https://app.team1.test:8443/api/status` |
-| **5** | Dynamic Round-Robin Alternation | Mac 4 | `./client/test_load_balancing.sh` |
-| **6** | Wireshark Protocol Proof (DNS/TCP/TLS) | Mac 2 / Mac 4 | Wireshark capture inspection |
-| **7** | HTTP Caching & 304 Validation | Mac 4 | `./client/test_caching.sh` |
-| **8** | Single Backend Failure Recovery | Mac 2 / Mac 4 | `./client/test_phase2_ha_failover.sh` |
-| **9** | Primary DNS Failure & Backup Failover | Mac 1 / Mac 4 | Stop Mac 1 DNS; verify resolution via Mac 3 |
-| **10**| Service Isolation (Firewall Protection) | Mac 3 / Mac 4 | `./client/test_phase2_firewall_isolation.sh` |
-| **11**| Faculty Fault Diagnosis & Viva | All | Execute `troubleshoot_fault.sh` & answer viva questions |
+| Mac 1 | 10.7.5.14 | primary DNS (dnsmasq), test client | 53 |
+| Mac 2 | 10.7.31.100 | **primary edge**: nginx TLS termination + load balancer | 8443, 8080 |
+| Mac 3 | 10.7.13.57 | Backend A, **backup DNS**, **standby edge**, pf isolation | 3001, 53, 8443 |
+| Mac 4 | 10.7.17.220 | Backend B, pf isolation, **main test client** | 3002 |
+
+```
+ client (Mac 4) ──DNS UDP 53──► Mac 1 dnsmasq (primary)   ┐ same records,
+        │        └─(fallback)─► Mac 3 dnsmasq (backup)    ┘ TTL 30 s
+        │ HTTPS 8443 (TLS 1.3, h2)
+        ▼
+ Mac 2 nginx  (primary edge)      Mac 3 nginx (standby edge, same cert)
+        │ round-robin, zone, passive health check, retry
+        ├──HTTP──► Mac 3 :3001 Backend A   ┐ pf: only 10.7.31.100 and
+        └──HTTP──► Mac 4 :3002 Backend B   ┘ 10.7.13.57 may connect
+```
 
 ---
 
-## 5. Conclusion
+## 2. Extension A: Backup DNS resolver
 
-Phase 2 successfully transformed the baseline Phase 1 networking prototype into a resilient, isolated, and fault-tolerant private platform. All deliverables, automation scripts, evidence artifacts, and viva resources are verified and ready for evaluation.
+**Setup.** `MAC-3/configs/dnsmasq_backup.conf` is an exact mirror of Mac 1's records (`app/api/team1.test → 10.7.31.100`, `local-ttl=30`). It does not forward to Mac 1, so it can answer on its own. Clients list both servers: Mac 1 `127.0.0.1, 10.7.13.57`; Mac 2 `10.7.5.14, 10.7.13.57`; Mac 4 uses `/etc/resolver/team1.test` with the same two servers (see §8 for why).
+
+**Test** (`MAC-4/evidence/phase2/extA_backup_dns_20261123_2352.log` + `.pcap`):
+
+| Time | Observation |
+|---|---|
+| 23:52:35 | primary `10.7.5.14 → 10.7.31.100`, backup `10.7.13.57 → 10.7.31.100` |
+| — | dnsmasq stopped on Mac 1 |
+| 23:53:53 | primary **timed out**; backup → `10.7.31.100`; system resolver → `10.7.31.100`; **HTTPS `code=200` in 0.33 s** |
+| pcap | `10.7.5.14 > 10.7.17.220: ICMP 10.7.5.14 udp port 53 unreachable`, then the query goes to `10.7.13.57.53` and is answered |
+
+**Learning.** A **DNS service failure** stops the client before any connection starts: the name does not resolve (`curl: (6) Could not resolve host`). An **application server failure** leaves DNS working, and the client gets a connection error or HTTP 502 from the edge. They need different redundancy: a second name server for DNS, a load balancer with health checks for the application. The pcap shows Mac 1 is still alive (it answers with ICMP "port unreachable"), but nothing listens on port 53, so the resolver moves to the next server.
+
+---
+
+## 3. Extension B: DNS TTL and controlled record change
+
+**Setup.** `local-ttl=30` on both DNS servers. The record is changed on **both** servers (Mac 1 with `MAC-1/scripts/phase2_ttl_cutover_demo.sh`, Mac 3 with `sed`), and dnsmasq is **restarted**, because SIGHUP does not reload `address=` lines.
+
+**Test, run 1** (`…_0024_run1_TTL_ok_standby_not_ready.log`, screenshot `ExtB_01`):
+
+| Time | DNS server (Mac 1) | Mac 4 cache |
+|---|---|---|
+| 00:25:47 | 10.7.31.100 | 10.7.31.100 |
+| **00:25:50** | **10.7.13.57** (changed) | 10.7.31.100 (still old) |
+| 00:26:09 | 10.7.13.57 | 10.7.31.100 (still old) |
+| **00:26:13** | 10.7.13.57 | **10.7.13.57** (cache expired, ~23 s) |
+
+**Test, run 2** (`…_0030_run2_FINAL.log`, screenshot `ExtBE_05`): the change at 00:32:00 reached the cache at 00:32:03 (~3 s). After the record was restored (00:32:52), the cache was still stale (`10.7.13.57`); **`sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`** switched it at once (00:32:54 → `10.7.31.100`).
+
+**Learning.** The TTL is how long a client may reuse an answer. The delay a client sees is the **remaining** TTL of its cached entry, so anything between 0 and 30 s (we measured 23 s and 3 s). Before a planned migration, operators lower the TTL in advance. A short TTL means fast cutover but more DNS queries; a long TTL means less load but slow recovery. `dig` bypasses the macOS cache, so to see cache behaviour you must use `dscacheutil -q host` or a real request.
+
+---
+
+## 4. Extension C: Service isolation (backend firewall)
+
+**Setup.** `scripts/pf_isolation.sh enable 3001` (Mac 3) / `enable 3002` (Mac 4). Rules go only into the sub-anchor `com.apple/cn-isolation`, which the stock macOS ruleset already evaluates. **`/etc/pf.conf` is never modified.** pf is enabled with a reference token (`pfctl -E`) so rollback restores the original state. The rules:
+
+```
+pass  in quick on lo0 proto tcp from any to any port 3001
+pass  in quick proto tcp from { 10.7.31.100, 10.7.13.57 } to any port 3001   # primary + standby edge
+block drop in quick proto tcp from any to any port 3001
+```
+
+**Test** (`MAC-1/…/extC_client_view_20261123_2359.log`, `MAC-2/…/extC_edge_view_0009.log`, `MAC-4/…/extC_e2e_0009.log`, `MAC-3|4/…/extC_enable_0006.log`):
+
+| Time | From | Result |
+|---|---|---|
+| 00:01:33 | Mac 1 (client) BEFORE | 3001 and 3002 `succeeded!` (anyone could bypass the edge) |
+| 00:06 | Mac 3, Mac 4 | rules enabled, pf `Status: Enabled` |
+| 00:08:59 | Mac 1 (client) | 3001 and 3002 **`Operation timed out`** |
+| 00:09:08 | Mac 2 (edge) | 3001 and 3002 `succeeded!`, Backend A JSON returned |
+| 00:09:14 | Mac 4 (client) | direct 3001 **timed out**; through the edge `HTTP/2 200`, B, A, B, A |
+| rollback | Mac 3, Mac 4 | `ROLLED BACK`, anchor empty, pf back to `Disabled` (original state) |
+| 00:12:19 | Mac 1 | 3001 and 3002 `succeeded!` again (rollback proven) |
+
+**Rollback:** `sudo ./scripts/pf_isolation.sh disable`.
+
+**Learning.** The edge is the only path to the application, so clients cannot skip TLS, logging or load balancing (least privilege). `block drop` gives a **timeout** (packet silently dropped); a closed port gives **connection refused** (RST). Telling these apart is a quick way to separate a firewall problem from a stopped service. Mac 3 is an MDM-managed Mac: the Application Firewall could not be changed from the command line, but pf still worked.
+
+---
+
+## 5. Extension D: High-availability failover
+
+**Setup** (`MAC-2/configs/nginx.conf`):
+```
+upstream backend_cluster {
+    zone backend_cluster 1m;
+    server 10.7.13.57:3001  max_fails=2 fail_timeout=5s;
+    server 10.7.17.220:3002 max_fails=2 fail_timeout=5s;
+}
+proxy_next_upstream error timeout http_502 http_503 http_504;
+proxy_connect_timeout 2s;
+```
+
+**Test** (`MAC-4/…/extD_ha_failover_20261123_2341.log`, `extD_recovery_20261123_2344.log`, `MAC-2/…/extD_nginx_*.log`):
+
+| Time | Observation |
+|---|---|
+| until 23:41:56 | strict B, A, B, A, all 200 |
+| 23:41:55 | Backend A stopped on Mac 3 |
+| 23:41:58, 23:42:02 | nginx log `upstream: 10.7.13.57:3001, 10.7.17.220:3002` → served by B: tried A, got `connect() failed (61: Connection refused)`, **retried on B inside the same request**. These requests took ~1.2–1.4 s instead of ~0.1 s |
+| 23:42:03–08 | only B; error log `upstream server temporarily disabled` (2 failures → A skipped for 5 s) |
+| whole run | **60 of 60 client requests returned `code=200`**, zero errors seen by the client |
+| 23:44:15+ | A restarted → B, A, B, A again |
+
+**Learning.** Open-source nginx uses **passive** health checks: it learns a backend is down from real requests failing, retries them on the next server, and stops sending to the failed one for `fail_timeout`. The cost is a slower first request after a failure. **Mac 2's nginx is now the single point of failure**: if it stops, every request fails (Ext F drill D2 shows this). Removing it needs a second edge (we built one in Ext E) plus a way to move traffic automatically: a floating IP with VRRP/keepalived, DNS failover with health checks, or a managed cloud load balancer.
+
+---
+
+## 6. Extension E: Controlled edge migration (DNS-based cutover)
+
+**Setup.** `MAC-3/configs/nginx.conf` is the Mac 2 config with only three differences: log/pid names, `X-Edge: mac3-standby`, and the certificate path, which points to **Mac 2's certificate and key** (same `CN=app.team1.test`, same Root CA). Both edges use the same backend pool.
+
+**Test** (`…_0030_run2_FINAL.log`, screenshots `ExtE_01–04`, `ExtBE_05`):
+
+| Time | DNS server | Mac 4 cache | Served by |
+|---|---|---|---|
+| 00:30:44–00:31:56 | 10.7.31.100 | 10.7.31.100 | **mac2-primary** |
+| 00:31:59 / 00:32:04 | record changed on Mac 1 / Mac 3 | | |
+| 00:32:00 | 10.7.13.57 | 10.7.31.100 | mac2-primary (cached client still on old edge) |
+| **00:32:03–00:32:47** | 10.7.13.57 | 10.7.13.57 | **mac3-standby** (HTTP 200, certificate verified, no warning) |
+| 00:32:51 | record restored | | |
+| 00:32:52 | 10.7.31.100 | 10.7.13.57 | mac3-standby (stale cache) |
+| 00:32:54 | after flush | 10.7.31.100 | **mac2-primary** |
+
+**Learning.** DNS cutover moves **new lookups**, not open connections. Clients move one by one as their cached answers expire, so the old edge must keep running for at least one TTL. Both DNS servers must be changed together, or clients get different answers depending on which server they ask. The standby must use a certificate the clients already trust, otherwise the cutover appears to users as a TLS error.
+
+**Failure found in run 1:** the standby nginx on Mac 3 had not started (it still pointed at an old certificate path). After the DNS change, clients whose cache expired were sent to a dead edge (`served-by=NONE`). Lesson: **health-check the new target before changing DNS** (`curl --resolve app.team1.test:8443:<new-ip> …`).
+
+---
+
+## 7. Extension F: Troubleshooting
+
+**Method.** Test one layer at a time from the client, top-down: L0 link/IP → L1 DNS → L4 TCP → L5/6 TLS → L7 HTTP. The first layer that fails is the one to fix. `scripts/diagnose.sh` runs this sequence and prints a verdict; the [runbook](EXT_F_TROUBLESHOOTING_RUNBOOK.md) maps each symptom to its cause and fix.
+
+**Drills** (`MAC-4/…/extF_*.log`, screenshots `ExtF_*`):
+
+| Drill | Injected fault | What diagnose.sh showed | Verdict | Fix |
+|---|---|---|---|---|
+| Baseline 00:38:07 | none | all PASS, `HTTP 200 edge=mac2-primary` | all layers healthy | — |
+| D2 00:39:29 | nginx stopped on Mac 2 | ping and DNS PASS, `TCP 10.7.31.100:8443 REFUSED` | **L4** | `start_nginx.sh start` |
+| D3 00:41:16 | both backends stopped | DNS, TCP, TLS PASS, `HTTP 502 Bad Gateway`, backends REFUSED | **L7** | restart backends → all layers healthy |
+
+**Real faults found during the project** (each was solved with the same top-down method):
+
+| Symptom | Layer | Cause | Fix |
+|---|---|---|---|
+| Mac 4 `dig` used `8.8.8.8` after `networksetup` | L1 DNS | Cloudflare WARP running, and DHCP DNS (`Default: DHCP-en0`) overriding the manual setting | quit WARP; per-domain resolver `/etc/resolver/team1.test` |
+| `curl: (60) unable to get local issuer certificate` | L5/6 TLS | Mac 4 trusted the **leaf** certificate (`538E…`), not the Root CA | removed it, trusted `Team1 Local Root CA` (`E02B…`) |
+| `curl -I` → `HTTP 501` from Backend B | L7 | Python `BaseHTTPRequestHandler` had no `do_HEAD` | added HEAD support |
+| nginx warned `duplicate header line: Server` | L7 | Backend B set `Server` twice | set it once via `server_version` |
+| Round-robin uneven (`B B A A A B`) | L7 | each nginx worker kept its own counter | `zone backend_cluster 1m;` |
+| DNS cutover sent clients to a dead edge | L4/L5 | standby nginx not started (old cert path) | rebuilt the standby config from Mac 2's; health-check before cutover |
+| Pushing from the coordinating Mac failed: `Could not resolve host: github.com` | L1 DNS | stale manual DNS servers (`10.7.22.124`, `10.7.1.218`) on that Mac | `networksetup -setdnsservers Wi-Fi Empty` |
+| Team IPs changed between sessions | L3 | DHCP + private (rotating) Wi-Fi MAC addresses | `team.env` + `check_ips.sh`; set Private Wi-Fi Address to Fixed |
+
+---
+
+## 8. Limitations and honest notes
+- **Mac 4 DNS:** campus DHCP DNS kept overriding the manual Wi-Fi DNS, so Mac 4 resolves `team1.test` through `/etc/resolver/team1.test` (both team DNS servers). Plain `dig` reads `/etc/resolv.conf` and does not use that file; demonstrate with `dscacheutil -q host -a name app.team1.test` or `dig @10.7.5.14 …`.
+- **Edge SPOF remains.** Ext E moves traffic manually through DNS; there is no automatic edge failover (no VRRP/floating IP).
+- **IPs are DHCP leases.** If they change before the demo: update `team.env`, run `./scripts/check_ips.sh`, fix the listed configs, and update the client resolver file.
+- Private keys (`ca.key`, `server.key`) are in the repository because this is a closed lab; a real deployment would keep them in a secret store.
+
+---
+
+## 9. Learning summary
+Phase 2 showed that each layer needs its own redundancy and its own way of being checked. A backup DNS server protects name resolution, but it does nothing for a dead backend; the load balancer's health checks protect against backend failure, but not against the load balancer itself. DNS-based migration works only within the limits of TTL and caching, so it must be planned (lower the TTL, prepare and test the target, keep the old edge running). Firewall isolation forces all traffic through the edge, and the difference between a timeout and a refused connection tells you which layer is blocking. Most of our real problems were not where they first appeared to be: a TLS error turned out to be the wrong certificate in the trust store, and a "DNS not working" problem turned out to be a VPN client overriding DNS. Testing layer by layer, from the bottom of the request path up, found each cause faster than guessing.
