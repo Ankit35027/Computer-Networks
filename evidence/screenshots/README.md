@@ -50,3 +50,5 @@ Prefix = stage / extension. Matching text logs and pcaps are in each `MAC-X/evid
 | **ExtBE_05_Mac4_TTL_cutover_mac2_to_mac3_and_flush_demo** | **Key Ext B + E evidence.** 00:32:00 DNS server already new (10.7.13.57) while client cache still old → still served by mac2-primary; 00:32:03+ served by mac3-standby (same cert, no errors). After restore at 00:32:52 cache is stale (mac3-standby) → manual flush → 00:32:54 instantly back on mac2-primary. Log: `MAC-4/evidence/phase2/extBE_ttl_cutover_20261124_0030.log` |
 | **Extension F – systematic diagnosis** | |
 | ExtF_00_Mac4_diagnose_baseline_all_layers_healthy | `scripts/diagnose.sh` on Mac 4: L0 ping all Macs → L1 primary+backup DNS + system resolver → L4 TCP 8443 → L5/6 TLS chain + system trust → L7 HTTP 200 (edge=mac2-primary). VERDICT: all layers healthy |
+| ExtF_D2_01_Mac4_edge_down_verdict_L4 | Drill D2 (nginx stopped on Mac 2): L0 + DNS PASS, `TCP 10.7.31.100:8443 REFUSED` → host up, nothing listening → VERDICT L4 |
+| ExtF_D2_02_Mac2_nginx_stop_and_restore | Fault injected (`start_nginx.sh stop`) and fixed (`start`, config test OK) on Mac 2 |
