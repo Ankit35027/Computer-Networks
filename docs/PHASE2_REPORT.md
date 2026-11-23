@@ -149,6 +149,8 @@ proxy_connect_timeout 2s;
 | 00:32:52 | 10.7.31.100 | 10.7.13.57 | mac3-standby (stale cache) |
 | 00:32:54 | after flush | 10.7.31.100 | **mac2-primary** |
 
+**Seen from the edges' access logs** (screenshots `ExtE_05`, `ExtE_06`): Mac 2 logged Mac 4's last request at **00:32:00**; Mac 3's standby logged Mac 4 from **00:32:03 to 00:32:52**; Mac 2 received it again at 00:32:54 after the restore and flush. No request was lost in between.
+
 **Learning.** DNS cutover moves **new lookups**, not open connections. Clients move one by one as their cached answers expire, so the old edge must keep running for at least one TTL. Both DNS servers must be changed together, or clients get different answers depending on which server they ask. The standby must use a certificate the clients already trust, otherwise the cutover appears to users as a TLS error.
 
 **Failure found in run 1:** the standby nginx on Mac 3 had not started (it still pointed at an old certificate path). After the DNS change, clients whose cache expired were sent to a dead edge (`served-by=NONE`). Lesson: **health-check the new target before changing DNS** (`curl --resolve app.team1.test:8443:<new-ip> …`).
@@ -179,6 +181,15 @@ proxy_connect_timeout 2s;
 | DNS cutover sent clients to a dead edge | L4/L5 | standby nginx not started (old cert path) | rebuilt the standby config from Mac 2's; health-check before cutover |
 | Pushing from the coordinating Mac failed: `Could not resolve host: github.com` | L1 DNS | stale manual DNS servers (`10.7.22.124`, `10.7.1.218`) on that Mac | `networksetup -setdnsservers Wi-Fi Empty` |
 | Team IPs changed between sessions | L3 | DHCP + private (rotating) Wi-Fi MAC addresses | `team.env` + `check_ips.sh`; set Private Wi-Fi Address to Fixed |
+
+### Section 6.3 failure scenarios, re-run on the LAN (Mac 4, 24 Nov 00:52; screenshot `P1_6.3_…`)
+| Scenario | Observation | Meaning |
+|---|---|---|
+| Wrong DNS server | `dig @10.7.17.220` → `connection timed out`, but `ping 10.7.31.100` → 1 packet received | DNS and IP connectivity are independent layers |
+| Name points to a wrong IP | `Trying 10.7.5.14:8443` → `Connection refused` | DNS is only a directory; it does not check the destination |
+| One backend stopped | all requests served by B (Ext D) | edge failover |
+| Both backends stopped | `HTTP 502 Bad Gateway`, DNS/TCP/TLS still pass (drill D3) | shows where the edge ends and the backend begins |
+| Wrong port | `Trying 10.7.31.100:9999` → `Connection refused` | host reachable; port is a separate identifier |
 
 ---
 

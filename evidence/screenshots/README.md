@@ -54,3 +54,8 @@ Prefix = stage / extension. Matching text logs and pcaps are in each `MAC-X/evid
 | ExtF_D2_02_Mac2_nginx_stop_and_restore | Fault injected (`start_nginx.sh stop`) and fixed (`start`, config test OK) on Mac 2 |
 | ExtF_D3_01_Mac4_backends_down_502_verdict_L7_and_restore | Drill D3 (both backends stopped): DNS, TCP, TLS PASS → `HTTP 502 Bad Gateway from edge=mac2-primary`, backends A/B REFUSED → VERDICT L7. After restart: `VERDICT: all layers healthy` |
 | ExtF_D3_02_Mac3_BackendA_killed_and_restarted | Fault injected and fixed on Mac 3 (Backend A) |
+| ExtE_05_Mac2_primary_edge_accesslog_last_request_003200 | Primary edge (Mac 2) access log: Mac 4's requests stop at 00:32:00, return at 00:32:54 (after restore + flush) |
+| ExtE_06_Mac3_standby_edge_accesslog_requests_from_0032 | Standby edge (Mac 3) access log: Mac 4's requests 00:32:03–00:32:52 – traffic moved edge-to-edge as the client cache expired |
+| **Phase 1 Section 6.3 failures, re-run on the LAN** | |
+| P1_6.3_Mac4_failures_on_LAN_wrongDNS_wrongIP_wrongPort | (1) wrong DNS server: `connection timed out`, but ping to the edge still works; (2) name pointed at wrong IP 10.7.5.14: `Connection refused` on 8443; (5) wrong port 9999: `Connection refused`. Scenarios 3 and 4 = Ext D and Ext F drill D3 |
+| S2_Mac1_RootCA_trusted_HTTPS_200 | Mac 1 (second client) trusts Root CA `E02BE070…`, HTTPS by name returns 200 |
