@@ -35,3 +35,6 @@ Prefix = stage / extension. Matching text logs and pcaps are in each `MAC-X/evid
 | ExtC_02_Mac3_pf_enabled_port3001 | Anchor `com.apple/cn-isolation`: pass edge + standby + lo0, block drop rest (3001) |
 | ExtC_03_Mac4_pf_enabled_port3002 | Same for 3002 |
 | ExtC_04_Mac2_edge_still_allowed | Edge (Mac 2) still reaches both backends |
+| ExtC_05_Mac3_rollback_pf_restored | `pf_isolation.sh disable`: anchor flushed, pf back to original (Disabled) state |
+| ExtC_06_Mac4_rollback_pf_restored | Same on Mac 4 |
+| ExtC_07_Mac1_AFTER_ROLLBACK_reachable_again | After rollback the client reaches 3001/3002 again (rollback proven) |
