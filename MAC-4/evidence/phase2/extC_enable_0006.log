@@ -1,0 +1,15 @@
+Backup of original pf state: /var/tmp/cn-isolation/backup_20261124_000637.txt
+pf enable token: 10550971150694733644
+== Extension C ENABLED: port 3002 reachable only from edge 10.7.31.100 (+ standby 10.7.13.57) and localhost
+-- pf status:
+Status: Enabled for 0 days 00:00:00           Debug: Urgent
+-- rules in com.apple/cn-isolation:
+pass in quick inet proto tcp from 10.7.31.100 to any port = 3002 flags S/SA keep state
+pass in quick inet proto tcp from 10.7.13.57 to any port = 3002 flags S/SA keep state
+pass in quick on lo0 proto tcp from any to any port = 3002 flags S/SA keep state
+block drop in quick proto tcp from any to any port = 3002
+pf disabled
+== Extension C ROLLED BACK: anchor flushed, our pf reference released (/etc/pf.conf never modified)
+-- pf status:
+Status: Disabled for 0 days 00:00:00          Debug: Urgent
+-- rules in com.apple/cn-isolation:

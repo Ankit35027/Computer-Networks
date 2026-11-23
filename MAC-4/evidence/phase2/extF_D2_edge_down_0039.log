@@ -1,0 +1,27 @@
+Diagnosing https://app.team1.test:8443  from Anshikas-MacBook-Pro-2 (10.7.17.220)  2026-11-24 00:39:29
+
+== L0 LINK/IP  - am I on the LAN, can I reach the servers?
+  [PASS] en0 has IP 10.7.17.220 (gateway 10.7.0.1)
+  [PASS] ping Mac1-DNS 10.7.5.14
+  [PASS] ping Mac2-edge 10.7.31.100
+  [PASS] ping Mac3-backupDNS/standby 10.7.13.57
+  [PASS] ping Mac4-backendB 10.7.17.220
+
+== L1 DNS  - does the name resolve, and to an edge?
+  [PASS] primary DNS 10.7.5.14 -> 10.7.31.100
+  [PASS] backup DNS 10.7.13.57 -> 10.7.31.100
+  [PASS] system resolver: app.team1.test -> 10.7.31.100
+
+== L4 TCP  - is anything listening on 10.7.31.100:8443?
+  [FAIL] TCP 10.7.31.100:8443 REFUSED -> host up, nothing listening (nginx stopped / wrong port)
+
+== L5/6 TLS  - handshake + certificate trust
+  [INFO] TLS not reached (TCP failed)
+
+== L7 HTTP/APP  - does the edge get an answer from a backend? (uses repo CA, so it works even if L5/6 trust failed)
+  [INFO] no HTTP response (lower layer failed)
+  -- backends as seen from THIS client (timeout here is NORMAL while Ext C pf is on):
+  [INFO] Backend A 10.7.13.57:3001 listening
+  [INFO] Backend B 10.7.17.220:3002 listening
+
+VERDICT: first failing layer = L4  -> fix this layer first (see docs/EXT_F_TROUBLESHOOTING_RUNBOOK.md)

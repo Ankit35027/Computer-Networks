@@ -1,0 +1,7 @@
+== direct to Backend A 00:09:14
+nc: connectx to 10.7.13.57 port 3001 (tcp) failed: Operation timed out
+== through edge:
+HTTP/2 200  x-backend: B 
+HTTP/2 200  x-backend: A 
+HTTP/2 200  x-backend: B 
+HTTP/2 200  x-backend: A 

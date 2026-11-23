@@ -1,0 +1,28 @@
+Diagnosing https://app.team1.test:8443  from Anshikas-MacBook-Pro-2 (10.7.17.220)  2026-11-24 00:41:16
+
+== L0 LINK/IP  - am I on the LAN, can I reach the servers?
+  [PASS] en0 has IP 10.7.17.220 (gateway 10.7.0.1)
+  [PASS] ping Mac1-DNS 10.7.5.14
+  [PASS] ping Mac2-edge 10.7.31.100
+  [PASS] ping Mac3-backupDNS/standby 10.7.13.57
+  [PASS] ping Mac4-backendB 10.7.17.220
+
+== L1 DNS  - does the name resolve, and to an edge?
+  [PASS] primary DNS 10.7.5.14 -> 10.7.31.100
+  [PASS] backup DNS 10.7.13.57 -> 10.7.31.100
+  [PASS] system resolver: app.team1.test -> 10.7.31.100
+
+== L4 TCP  - is anything listening on 10.7.31.100:8443?
+  [PASS] TCP connect 10.7.31.100:8443 (3-way handshake OK)
+
+== L5/6 TLS  - handshake + certificate trust
+  [PASS] handshake OK, cert chains to Team1 Root CA: CN=app.team1.test
+  [PASS] system trust store accepts the certificate (no -k needed)
+
+== L7 HTTP/APP  - does the edge get an answer from a backend? (uses repo CA, so it works even if L5/6 trust failed)
+  [FAIL] HTTP 502 Bad Gateway from edge=mac2-primary -> edge OK, it cannot reach ANY backend (backends down / wrong upstream IP or port / pf blocking the edge)
+  -- backends as seen from THIS client (timeout here is NORMAL while Ext C pf is on):
+  [INFO] Backend A 10.7.13.57:3001 REFUSED (process not running)
+  [INFO] Backend B 10.7.17.220:3002 REFUSED (process not running)
+
+VERDICT: first failing layer = L7  -> fix this layer first (see docs/EXT_F_TROUBLESHOOTING_RUNBOOK.md)

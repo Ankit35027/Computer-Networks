@@ -1,0 +1,47 @@
+== BASELINE, then >>> run CUTOVER on Mac 1 + Mac 3 now (script waits) <<<
+00:30:44  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:30:47  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:30:51  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:30:54  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:30:58  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:01  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:04  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:07  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:11  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:14  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:17  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:20  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:24  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:27  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:30  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:33  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:36  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:39  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:43  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:46  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:49  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:52  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:31:56  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+00:32:00  DNS-server=10.7.13.57  client-cache=10.7.31.100  served-by=mac2-primary
+== DNS RECORD CHANGED at 00:32:03 (TTL=30s) - watching client cache:
+00:32:03  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:06  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:09  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:12  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:16  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:19  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:22  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:25  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:28  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:31  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:35  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:38  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:41  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:44  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+00:32:47  DNS-server=10.7.13.57  client-cache=10.7.13.57  served-by=mac3-standby
+== >>> now run RESTORE on Mac 1 + Mac 3 (script waits) <<<
+== RECORD RESTORED at 00:32:52 - FLUSH DEMO:
+00:32:52  DNS-server=10.7.31.100  client-cache=10.7.13.57  served-by=mac3-standby
+   ^ before flush (cache still old)
+00:32:54  DNS-server=10.7.31.100  client-cache=10.7.31.100  served-by=mac2-primary
+   ^ after flush (instant change)

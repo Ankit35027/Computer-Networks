@@ -1,0 +1,9 @@
+== BEFORE 00:01:33
+Connection to 10.7.13.57 port 3001 [tcp/redwood-broker] succeeded!
+Connection to 10.7.17.220 port 3002 [tcp/exlm-agent] succeeded!
+== AFTER-ENABLE 00:08:59
+nc: connectx to 10.7.13.57 port 3001 (tcp) failed: Operation timed out
+nc: connectx to 10.7.17.220 port 3002 (tcp) failed: Operation timed out
+== AFTER-ROLLBACK 00:12:19
+Connection to 10.7.13.57 port 3001 [tcp/redwood-broker] succeeded!
+Connection to 10.7.17.220 port 3002 [tcp/exlm-agent] succeeded!
