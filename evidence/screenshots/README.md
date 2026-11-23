@@ -38,3 +38,7 @@ Prefix = stage / extension. Matching text logs and pcaps are in each `MAC-X/evid
 | ExtC_05_Mac3_rollback_pf_restored | `pf_isolation.sh disable`: anchor flushed, pf back to original (Disabled) state |
 | ExtC_06_Mac4_rollback_pf_restored | Same on Mac 4 |
 | ExtC_07_Mac1_AFTER_ROLLBACK_reachable_again | After rollback the client reaches 3001/3002 again (rollback proven) |
+| **Extension B – TTL** | |
+| ExtB_01_Mac4_TTL_cache_lag_23s_run1 | Record changed on DNS server at 00:25:50; client cache kept the OLD IP until 00:26:09 and switched at 00:26:13 (~23 s ≤ TTL 30 s). In this run the standby edge was not running, so `served-by=NONE` after cutover (see ExtF lesson) |
+| **Troubleshooting findings (Ext F)** | |
+| ExtF_lesson_01_Mac3_standby_not_ready_cert_path | Standby nginx failed to start (wrong cert path in old config) → cutting DNS over to a not-ready edge caused an outage for cached-out clients. Lesson: health-check the target before a DNS cutover |
