@@ -42,3 +42,8 @@ Prefix = stage / extension. Matching text logs and pcaps are in each `MAC-X/evid
 | ExtB_01_Mac4_TTL_cache_lag_23s_run1 | Record changed on DNS server at 00:25:50; client cache kept the OLD IP until 00:26:09 and switched at 00:26:13 (~23 s ≤ TTL 30 s). In this run the standby edge was not running, so `served-by=NONE` after cutover (see ExtF lesson) |
 | **Troubleshooting findings (Ext F)** | |
 | ExtF_lesson_01_Mac3_standby_not_ready_cert_path | Standby nginx failed to start (wrong cert path in old config) → cutting DNS over to a not-ready edge caused an outage for cached-out clients. Lesson: health-check the target before a DNS cutover |
+| **Extension E – DNS-based edge migration (run 2)** | |
+| ExtE_01_Mac1_DNS_cutover_to_standby_003159 | Primary DNS: app.team1.test → 10.7.13.57 (standby edge) at 00:31:59 |
+| ExtE_02_Mac3_backup_DNS_cutover_003204 | Backup DNS changed too (both servers must agree) at 00:32:04 |
+| ExtE_03_Mac3_backup_DNS_restored_003233 | Backup restored to 10.7.31.100 |
+| ExtE_04_Mac1_DNS_restored_003251 | Primary restored to 10.7.31.100 |
