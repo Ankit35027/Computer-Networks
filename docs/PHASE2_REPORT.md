@@ -161,7 +161,7 @@ proxy_connect_timeout 2s;
 
 ### 3.2 Practice drills (faculty-style injected faults)
 
-**Drills** (`MAC-4/evidence/phase2/extF_*.log`, screenshots `ExtF_*`):
+Evidence: `MAC-4/evidence/phase2/extF_*.log`, screenshots `ExtF_*`.
 
 | Drill | Injected fault | What diagnose.sh showed | Verdict | Fix |
 |---|---|---|---|---|
@@ -171,7 +171,7 @@ proxy_connect_timeout 2s;
 
 ### 3.3 Real faults found during the project
 
-**Real faults found during the project** (each was solved with the same top-down method):
+Each was solved with the same top-down method:
 
 | Symptom | Layer | Cause | Fix |
 |---|---|---|---|
