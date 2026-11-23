@@ -5,6 +5,9 @@
 # Computer Networks Course Project - Phase 2 Extension D
 # ==============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 URL="https://app.team1.test:8443/api/status"
 TOTAL_REQUESTS="${1:-10}"
 
@@ -28,10 +31,10 @@ for i in $(seq 1 "$TOTAL_REQUESTS"); do
     if [ "$HTTP_CODE" == "200" ]; then
         if [ "$BACKEND" == "A" ]; then
             ((A_COUNT++))
-            echo "Request #$i: HTTP $HTTP_CODE | Serviced by Backend A [10.7.22.2:3001]"
+            echo "Request #$i: HTTP $HTTP_CODE | Serviced by Backend A [${MAC3_IP}:3001]"
         elif [ "$BACKEND" == "B" ]; then
             ((B_COUNT++))
-            echo "Request #$i: HTTP $HTTP_CODE | Serviced by Backend B [10.7.21.68:3002]"
+            echo "Request #$i: HTTP $HTTP_CODE | Serviced by Backend B [${MAC4_IP}:3002]"
         else
             echo "Request #$i: HTTP $HTTP_CODE | Serviced by Backend: $BACKEND"
         fi

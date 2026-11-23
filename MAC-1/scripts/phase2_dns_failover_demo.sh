@@ -5,6 +5,9 @@
 # Computer Networks Course Project - Phase 2 Extension A
 # ==============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAC1_DIR="$(dirname "$SCRIPT_DIR")"
 DNSMASQ_CONF="$MAC1_DIR/configs/dnsmasq.conf"
@@ -18,7 +21,7 @@ case "${1:-status}" in
     stop)
         echo "Stopping Primary DNS (dnsmasq) to simulate DNS outage..."
         sudo pkill -f dnsmasq || true
-        echo "  [DONE] Primary DNS stopped! Client queries will now failover to Mac 3 (10.7.22.2)."
+        echo "  [DONE] Primary DNS stopped! Client queries will now failover to Mac 3 (${MAC3_IP})."
         ;;
     start)
         echo "Starting Primary DNS (dnsmasq) with config: $DNSMASQ_CONF..."

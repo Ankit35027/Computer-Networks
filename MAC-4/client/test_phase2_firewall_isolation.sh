@@ -5,8 +5,11 @@
 # Computer Networks Course Project - Phase 2 Extension C
 # ==============================================================================
 
-BACKEND_A_IP="10.7.22.2"
-BACKEND_B_IP="10.7.21.68"
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
+BACKEND_A_IP="${MAC3_IP}"
+BACKEND_B_IP="${MAC4_IP}"
 EDGE_PROXY="https://app.team1.test:8443"
 
 echo "=================================================="
@@ -32,7 +35,7 @@ X_BACKEND=$(curl -skI "$EDGE_PROXY/api/status" | grep -i "X-Backend" | awk '{pri
 
 if echo "$EDGE_STATUS" | grep -q "200"; then
     echo "  [PASS] Edge Proxy access SUCCEEDED! ($EDGE_STATUS, Backend: $X_BACKEND)"
-    echo "         Proves edge proxy (10.7.23.158) is allowed while clients are restricted."
+    echo "         Proves edge proxy (${MAC2_IP}) is allowed while clients are restricted."
 else
     echo "  [FAIL] Edge Proxy request failed: $EDGE_STATUS"
 fi

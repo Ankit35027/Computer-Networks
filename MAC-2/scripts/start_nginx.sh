@@ -9,11 +9,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 NGINX_CONF="$PROJECT_ROOT/configs/nginx.conf"
 
-# Dynamically ensure certificate paths match current directory
-sed -i '' "s|ssl_certificate .*/certs/server.crt;|ssl_certificate \"$PROJECT_ROOT/certs/server.crt\";|g" "$NGINX_CONF" 2>/dev/null || true
-sed -i '' "s|ssl_certificate_key .*/certs/server.key;|ssl_certificate_key \"$PROJECT_ROOT/certs/server.key\";|g" "$NGINX_CONF" 2>/dev/null || true
-sed -i '' "s|ssl_certificate .*/certs/server.crt;|ssl_certificate \"$PROJECT_ROOT/certs/server.crt\";|g" "$PROJECT_ROOT/configs/nginx_ha.conf" 2>/dev/null || true
-sed -i '' "s|ssl_certificate_key .*/certs/server.key;|ssl_certificate_key \"$PROJECT_ROOT/certs/server.key\";|g" "$PROJECT_ROOT/configs/nginx_ha.conf" 2>/dev/null || true
 
 NGINX_BIN=$(which nginx 2>/dev/null || echo "/opt/homebrew/bin/nginx")
 

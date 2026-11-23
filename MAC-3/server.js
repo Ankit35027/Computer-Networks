@@ -39,6 +39,30 @@ app.get("/", (req, res) => {
     res.json(body);
 });
 
+// ─── GET /cached ──────────────────────────────────────────────────────────────
+// Task F demo endpoint. The body is byte-identical to Backend B's /cached
+// (MAC-4/backend/backend_b.py CACHE_CONTENT), so A and B produce the SAME ETag
+// and a conditional request returns 304 whichever backend round-robin picks.
+const SHARED_CACHE_CONTENT = '{"resource":"cached-demo","version":1,"cache_policy":"public, max-age=60"}';
+const SHARED_CACHE_ETAG = `"${crypto.createHash("md5").update(SHARED_CACHE_CONTENT).digest("hex")}"`;
+
+// RFC 9110 weak comparison: nginx gzip turns "x" into W/"x"; browsers may send a list.
+function etagMatches(ifNoneMatch, etag) {
+    if (!ifNoneMatch) return false;
+    if (ifNoneMatch.trim() === "*") return true;
+    const wanted = etag.replace("W/", "");
+    return ifNoneMatch.split(",").some(t => t.trim().replace("W/", "") === wanted);
+}
+
+app.get("/cached", (req, res) => {
+    res.set("Cache-Control", "public, max-age=60");
+    res.set("ETag", SHARED_CACHE_ETAG);
+    if (etagMatches(req.headers["if-none-match"], SHARED_CACHE_ETAG)) {
+        return res.status(304).end();
+    }
+    res.type("application/json").send(SHARED_CACHE_CONTENT);
+});
+
 // ─── GET /api/status ──────────────────────────────────────────────────────────
 // Dynamic (timestamp changes each call) → demonstrate no-store / always fresh
 app.get("/api/status", (req, res) => {

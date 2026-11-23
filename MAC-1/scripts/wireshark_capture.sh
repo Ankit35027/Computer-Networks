@@ -6,12 +6,15 @@
 # This captures into a .pcapng file you open in Wireshark GUI.
 # =============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EVIDENCE_DIR="${SCRIPT_DIR}/../evidence/captures"
 mkdir -p "${EVIDENCE_DIR}"
 CAPTURE_FILE="${EVIDENCE_DIR}/wireshark_capture_$(date +%Y%m%d_%H%M%S).pcapng"
 MAC1_IP="$(ipconfig getifaddr en0 2>/dev/null || echo '127.0.0.1')"
-MAC2_IP="10.7.23.158"
+MAC2_IP="${MAC2_IP}"
 DOMAIN="app.team1.test"
 
 GREEN='\033[0;32m'

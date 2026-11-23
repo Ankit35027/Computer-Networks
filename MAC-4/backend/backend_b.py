@@ -15,9 +15,24 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 BACKEND_ID = "B"
-CACHE_CONTENT = '{"message": "Cacheable resource from Backend B", "backend": "B", "version": "1.0"}'
+# /cached body is byte-identical on Backend A (MAC-3/server.js) and Backend B,
+# so both backends compute the SAME ETag. A conditional request (If-None-Match)
+# therefore gets 304 no matter which backend round-robin picks.
+# Keep this string in sync with SHARED_CACHE_CONTENT in MAC-3/server.js.
+CACHE_CONTENT = '{"resource":"cached-demo","version":1,"cache_policy":"public, max-age=60"}'
 CACHE_ETAG = f'"{hashlib.md5(CACHE_CONTENT.encode("utf-8")).hexdigest()}"'
 CACHE_MAX_AGE = 60
+
+
+def etag_matches(if_none_match, etag):
+    """RFC 9110 weak comparison for If-None-Match.
+    nginx gzip turns "abc" into W/"abc", and browsers may send a list of tags."""
+    if not if_none_match:
+        return False
+    if if_none_match.strip() == "*":
+        return True
+    wanted = etag.replace("W/", "").strip()
+    return any(tag.strip().replace("W/", "") == wanted for tag in if_none_match.split(","))
 
 class BackendBHandler(http.server.BaseHTTPRequestHandler):
     def send_cors_and_common_headers(self, status_code=200, content_type="application/json"):
@@ -37,7 +52,7 @@ class BackendBHandler(http.server.BaseHTTPRequestHandler):
         # 1. GET / - Basic confirmation + Task F Caching
         if path == "/":
             inm = self.headers.get("If-None-Match")
-            if inm and (inm == CACHE_ETAG or inm.strip('"') == CACHE_ETAG.strip('"') or inm == "*"):
+            if etag_matches(inm, CACHE_ETAG):
                 print(f"[{timestamp}] [Backend B] Conditional match on /! Returning 304 Not Modified")
                 self.send_response(304)
                 self.send_header("X-Backend", BACKEND_ID)
@@ -79,7 +94,7 @@ class BackendBHandler(http.server.BaseHTTPRequestHandler):
         if path in ["/cached", "/api/cached"]:
             inm = self.headers.get("If-None-Match")
             # Remove quotes or compare direct
-            if inm and (inm == CACHE_ETAG or inm.strip('"') == CACHE_ETAG.strip('"') or inm == "*"):
+            if etag_matches(inm, CACHE_ETAG):
                 print(f"[{timestamp}] [Backend B] Conditional match! Returning 304 Not Modified")
                 self.send_response(304)
                 self.send_header("X-Backend", BACKEND_ID)

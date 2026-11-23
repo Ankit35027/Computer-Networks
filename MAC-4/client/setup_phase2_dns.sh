@@ -5,10 +5,13 @@
 # Computer Networks Course Project - Phase 2
 # ==============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 set -euo pipefail
 
-PRIMARY_DNS="10.7.21.249"  # Mac 1 (Primary dnsmasq)
-BACKUP_DNS="10.7.22.2"     # Mac 3 (Secondary dnsmasq)
+PRIMARY_DNS="${MAC1_IP}"  # Mac 1 (Primary dnsmasq)
+BACKUP_DNS="${MAC3_IP}"     # Mac 3 (Secondary dnsmasq)
 
 echo "=================================================="
 echo " Phase 2 DNS Configuration: Multi-Resolver Setup"

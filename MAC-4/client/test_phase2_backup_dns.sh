@@ -5,8 +5,11 @@
 # Computer Networks Course Project - Phase 2 Extension A
 # ==============================================================================
 
-PRIMARY_DNS="10.7.21.249"
-BACKUP_DNS="10.7.22.2"
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
+PRIMARY_DNS="${MAC1_IP}"
+BACKUP_DNS="${MAC3_IP}"
 DOMAIN="app.team1.test"
 
 echo "=================================================="
@@ -19,8 +22,8 @@ echo "=================================================="
 echo ""
 echo "[STEP 1] Direct Query to Primary DNS ($PRIMARY_DNS)..."
 PRIMARY_OUT=$(dig @"$PRIMARY_DNS" "$DOMAIN" +noall +answer +stats 2>&1)
-if echo "$PRIMARY_OUT" | grep -q "10.7.23.158"; then
-    echo "  [SUCCESS] Primary DNS resolved $DOMAIN to 10.7.23.158!"
+if echo "$PRIMARY_OUT" | grep -q "${MAC2_IP}"; then
+    echo "  [SUCCESS] Primary DNS resolved $DOMAIN to ${MAC2_IP}!"
     echo "$PRIMARY_OUT" | sed 's/^/    /'
 else
     echo "  [OFFLINE / UNREACHABLE] Primary DNS did not respond."
@@ -29,8 +32,8 @@ fi
 echo ""
 echo "[STEP 2] Direct Query to Backup DNS ($BACKUP_DNS)..."
 BACKUP_OUT=$(dig @"$BACKUP_DNS" "$DOMAIN" +noall +answer +stats 2>&1)
-if echo "$BACKUP_OUT" | grep -q "10.7.23.158"; then
-    echo "  [SUCCESS] Backup DNS resolved $DOMAIN to 10.7.23.158!"
+if echo "$BACKUP_OUT" | grep -q "${MAC2_IP}"; then
+    echo "  [SUCCESS] Backup DNS resolved $DOMAIN to ${MAC2_IP}!"
     echo "$BACKUP_OUT" | sed 's/^/    /'
 else
     echo "  [FAIL] Backup DNS did not respond on $BACKUP_DNS:53."
@@ -40,7 +43,7 @@ echo ""
 echo "[STEP 3] Client System Resolver Query (Operating System Failover)..."
 echo "  Querying system resolver via standard dig without @server argument..."
 SYS_OUT=$(dig "$DOMAIN" +noall +answer +stats 2>&1)
-if echo "$SYS_OUT" | grep -q "10.7.23.158"; then
+if echo "$SYS_OUT" | grep -q "${MAC2_IP}"; then
     echo "  [PASS] System resolved $DOMAIN successfully!"
     echo "$SYS_OUT" | sed 's/^/    /'
 else

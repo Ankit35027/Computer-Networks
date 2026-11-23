@@ -5,8 +5,11 @@
 # Computer Networks Course Project - Phase 2 Extension B
 # ==============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 DOMAIN="app.team1.test"
-PRIMARY_DNS="10.7.21.249"
+PRIMARY_DNS="${MAC1_IP}"
 
 echo "=================================================="
 echo " Extension B: DNS TTL & Cache Invalidation Demo"

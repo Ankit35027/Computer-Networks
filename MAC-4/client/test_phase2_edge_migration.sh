@@ -5,9 +5,12 @@
 # Computer Networks Course Project - Phase 2 Extension E
 # ==============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 DOMAIN="app.team1.test"
-PRIMARY_EDGE_IP="10.7.23.158"
-STANDBY_EDGE_IP="10.7.22.2"
+PRIMARY_EDGE_IP="${MAC2_IP}"
+STANDBY_EDGE_IP="${MAC3_IP}"
 
 echo "=================================================="
 echo " Extension E: Controlled Edge Migration Verification"

@@ -8,6 +8,9 @@
 # Save this output — you need it for the Architecture Document.
 # =============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 set -e
 
 # ── Colors ────────────────────────────────────────────────────────────────────
@@ -61,9 +64,9 @@ echo ""
 echo -e "  ${CYAN}Edit the IPs below before running! Replace with your team's actual IPs.${NC}"
 echo ""
 
-MAC2_IP="10.7.23.158"   # Edge / Reverse Proxy (nginx)
-MAC3_IP="10.7.22.2"     # Backend A (port 3001)
-MAC4_IP="10.7.21.68"    # Backend B (port 3002) + Test Client
+MAC2_IP="${MAC2_IP}"   # Edge / Reverse Proxy (nginx)
+MAC3_IP="${MAC3_IP}"     # Backend A (port 3001)
+MAC4_IP="${MAC4_IP}"    # Backend B (port 3002) + Test Client
 
 ping_check() {
     local label=$1

@@ -5,6 +5,9 @@
 # Computer Networks Course Project - Phase 2 Extension F
 # ==============================================================================
 
+# Team IPs come from the single source of truth: <repo>/team.env
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/team.env"
+
 TARGET_DOMAIN="app.team1.test"
 TARGET_PORT="8443"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -46,18 +49,18 @@ else
     echo "  -> ACTION: Check './scripts/start_nginx.sh status' or python fallback proxy."
 fi
 
-echo "  Checking Backend A Port 3001 (Local & LAN 10.7.22.2)..."
-if nc -z -w 2 10.7.22.2 3001 2>/dev/null; then
-    echo "    [PASS] LAN Backend A (10.7.22.2:3001) CONNECTED"
+echo "  Checking Backend A Port 3001 (Local & LAN ${MAC3_IP})..."
+if nc -z -w 2 ${MAC3_IP} 3001 2>/dev/null; then
+    echo "    [PASS] LAN Backend A (${MAC3_IP}:3001) CONNECTED"
 elif nc -z -w 2 127.0.0.1 3001 2>/dev/null; then
     echo "    [PASS] Local Backend A (127.0.0.1:3001) CONNECTED"
 else
     echo "    [FAIL] Backend A DOWN or BLOCKED by firewall"
 fi
 
-echo "  Checking Backend B Port 3002 (Local & LAN 10.7.21.68)..."
-if nc -z -w 2 10.7.21.68 3002 2>/dev/null; then
-    echo "    [PASS] LAN Backend B (10.7.21.68:3002) CONNECTED"
+echo "  Checking Backend B Port 3002 (Local & LAN ${MAC4_IP})..."
+if nc -z -w 2 ${MAC4_IP} 3002 2>/dev/null; then
+    echo "    [PASS] LAN Backend B (${MAC4_IP}:3002) CONNECTED"
 elif nc -z -w 2 127.0.0.1 3002 2>/dev/null; then
     echo "    [PASS] Local Backend B (127.0.0.1:3002) CONNECTED"
 else
