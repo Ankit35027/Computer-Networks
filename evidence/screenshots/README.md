@@ -52,3 +52,5 @@ Prefix = stage / extension. Matching text logs and pcaps are in each `MAC-X/evid
 | ExtF_00_Mac4_diagnose_baseline_all_layers_healthy | `scripts/diagnose.sh` on Mac 4: L0 ping all Macs → L1 primary+backup DNS + system resolver → L4 TCP 8443 → L5/6 TLS chain + system trust → L7 HTTP 200 (edge=mac2-primary). VERDICT: all layers healthy |
 | ExtF_D2_01_Mac4_edge_down_verdict_L4 | Drill D2 (nginx stopped on Mac 2): L0 + DNS PASS, `TCP 10.7.31.100:8443 REFUSED` → host up, nothing listening → VERDICT L4 |
 | ExtF_D2_02_Mac2_nginx_stop_and_restore | Fault injected (`start_nginx.sh stop`) and fixed (`start`, config test OK) on Mac 2 |
+| ExtF_D3_01_Mac4_backends_down_502_verdict_L7_and_restore | Drill D3 (both backends stopped): DNS, TCP, TLS PASS → `HTTP 502 Bad Gateway from edge=mac2-primary`, backends A/B REFUSED → VERDICT L7. After restart: `VERDICT: all layers healthy` |
+| ExtF_D3_02_Mac3_BackendA_killed_and_restarted | Fault injected and fixed on Mac 3 (Backend A) |
