@@ -1,3 +1,5 @@
+> **Note (24 Nov 2026):** this guide was written before Phase 2 testing and may show old IPs (`10.7.21.249`, `10.7.23.158`, `10.7.22.2`, `10.7.21.68`) or placeholders (`10.7.8.x`). Current IPs: [`team.env`](../team.env). Current setup and results: [`CONFIGURATION_BUNDLE.md`](../docs/CONFIGURATION_BUNDLE.md) and [`PHASE2_REPORT.md`](../docs/PHASE2_REPORT.md).
+
 # Computer Networks Course Project - Phase 1 (Mac 4 Workspace)
 
 ## Machine Role: Backend Server B + Test Client
@@ -83,7 +85,7 @@ Configure your teammate IPs in `network/team_ips.env`, then:
 ---
 
 ## 📚 Complete Guides & Documentation
-- **Step-by-Step Task Walkthrough**: [PHASE1_MAC4_GUIDE.md](file:///Users/anshikaseth/Desktop/computer%20network/docs/PHASE1_MAC4_GUIDE.md)
-- **Wireshark Packet Capture Instructions**: [WIRESHARK_CAPTURE_GUIDE.md](file:///Users/anshikaseth/Desktop/computer%20network/docs/WIRESHARK_CAPTURE_GUIDE.md)
-- **Viva Preparation Guide (10 Marks)**: [VIVA_PREP_MAC4.md](file:///Users/anshikaseth/Desktop/computer%20network/docs/VIVA_PREP_MAC4.md)
-- **Topology & Service Map**: [topology_info.txt](file:///Users/anshikaseth/Desktop/computer%20network/network/topology_info.txt)
+- **Step-by-Step Task Walkthrough**: [PHASE1_MAC4_GUIDE.md](docs/PHASE1_MAC4_GUIDE.md)
+- **Wireshark Packet Capture Instructions**: [WIRESHARK_CAPTURE_GUIDE.md](docs/WIRESHARK_CAPTURE_GUIDE.md)
+- **Viva Preparation Guide (10 Marks)**: [VIVA_PREP_MAC4.md](docs/VIVA_PREP_MAC4.md)
+- **Topology & Service Map**: [topology_info.txt](network/topology_info.txt)

@@ -16,7 +16,7 @@ echo " Mac 2 Live Packet Capture Evidence Generator"
 echo "=================================================="
 
 # Ensure Nginx & Backends are running
-"$SCRIPT_DIR/start_backends.sh" start > /dev/null 2>&1
+"$SCRIPT_DIR/../archive_phase1_localhost/start_backends.sh" start > /dev/null 2>&1
 "$SCRIPT_DIR/start_nginx.sh" start > /dev/null 2>&1
 
 echo ""

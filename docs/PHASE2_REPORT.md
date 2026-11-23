@@ -87,7 +87,7 @@ pass  in quick proto tcp from { 10.7.31.100, 10.7.13.57 } to any port 3001   # p
 block drop in quick proto tcp from any to any port 3001
 ```
 
-**Test** (`MAC-1/…/extC_client_view_20261123_2359.log`, `MAC-2/…/extC_edge_view_0009.log`, `MAC-4/…/extC_e2e_0009.log`, `MAC-3|4/…/extC_enable_0006.log`):
+**Test** (`MAC-1/evidence/phase2/extC_client_view_20261123_2359.log`, `MAC-2/evidence/phase2/extC_edge_view_0009.log`, `MAC-4/evidence/phase2/extC_e2e_0009.log`, `MAC-3/evidence/phase2/ and MAC-4/evidence/phase2/extC_enable_0006.log`):
 
 | Time | From | Result |
 |---|---|---|
@@ -118,7 +118,7 @@ proxy_next_upstream error timeout http_502 http_503 http_504;
 proxy_connect_timeout 2s;
 ```
 
-**Test** (`MAC-4/…/extD_ha_failover_20261123_2341.log`, `extD_recovery_20261123_2344.log`, `MAC-2/…/extD_nginx_*.log`):
+**Test** (`MAC-4/evidence/phase2/extD_ha_failover_20261123_2341.log`, `extD_recovery_20261123_2344.log`, `MAC-2/evidence/phase2/extD_nginx_*.log`):
 
 | Time | Observation |
 |---|---|
@@ -161,7 +161,7 @@ proxy_connect_timeout 2s;
 
 **Method.** Test one layer at a time from the client, top-down: L0 link/IP → L1 DNS → L4 TCP → L5/6 TLS → L7 HTTP. The first layer that fails is the one to fix. `scripts/diagnose.sh` runs this sequence and prints a verdict; the [runbook](EXT_F_TROUBLESHOOTING_RUNBOOK.md) maps each symptom to its cause and fix.
 
-**Drills** (`MAC-4/…/extF_*.log`, screenshots `ExtF_*`):
+**Drills** (`MAC-4/evidence/phase2/extF_*.log`, screenshots `ExtF_*`):
 
 | Drill | Injected fault | What diagnose.sh showed | Verdict | Fix |
 |---|---|---|---|---|

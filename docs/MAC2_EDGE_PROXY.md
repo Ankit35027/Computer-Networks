@@ -1,3 +1,5 @@
+> **Note (24 Nov 2026):** this guide was written before Phase 2 testing and may show old IPs (`10.7.21.249`, `10.7.23.158`, `10.7.22.2`, `10.7.21.68`) or placeholders (`10.7.8.x`). Current IPs: [`team.env`](../team.env). Current setup and results: [`CONFIGURATION_BUNDLE.md`](../docs/CONFIGURATION_BUNDLE.md) and [`PHASE2_REPORT.md`](../docs/PHASE2_REPORT.md).
+
 # Mac 2: Edge Reverse Proxy & Load Balancer Guide
 
 **Machine Role**: Edge Gateway, TLS Termination Server, HTTP/2 Proxy, and Load Balancer  

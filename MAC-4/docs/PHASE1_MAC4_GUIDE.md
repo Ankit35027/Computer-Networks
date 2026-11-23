@@ -115,7 +115,7 @@ Run the automated caching test:
 - Second request: Sends `If-None-Match: "backend-b-v1.0"`, returns `HTTP 304 Not Modified`.
 
 ### Task G: Wireshark Captures
-See [WIRESHARK_CAPTURE_GUIDE.md](file:///Users/anshikaseth/Desktop/computer%20network/docs/WIRESHARK_CAPTURE_GUIDE.md) for step-by-step packet capture filters and screenshots.
+See [WIRESHARK_CAPTURE_GUIDE.md](WIRESHARK_CAPTURE_GUIDE.md) for step-by-step packet capture filters and screenshots.
 
 ---
 
