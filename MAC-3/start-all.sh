@@ -63,10 +63,10 @@ fi
 # ── 3. Backend Firewall (Extension C) ────────────────────────────────────────
 echo ""
 echo "▶  [3/4] Applying pf backend isolation rules (Extension C)..."
-if sudo pfctl -e -f "$SCRIPT_DIR/configs/pf_backend_isolation.conf" 2>&1; then
+if sudo "$SCRIPT_DIR/../scripts/pf_isolation.sh" enable 3001; then
     echo "   ✅ pf rules loaded – port 3001 isolated to edge proxy only"
 else
-    echo "   ⚠️  pfctl failed (check configs/pf_backend_isolation.conf)"
+    echo "   ⚠️  pf_isolation.sh failed (rollback: sudo ../scripts/pf_isolation.sh disable)"
 fi
 
 # ── 4. Standby Edge (Extension E) ────────────────────────────────────────────
@@ -92,6 +92,6 @@ echo "════════════════════════�
 echo "  All services launched. To stop:"
 echo "    Backend A  →  kill \$(lsof -ti:3001)"
 echo "    dnsmasq    →  sudo pkill dnsmasq"
-echo "    pf rules   →  sudo pfctl -d"
+echo "    pf rules   →  sudo ../scripts/pf_isolation.sh disable"
 echo "    nginx      →  sudo nginx -s stop"
 echo "═══════════════════════════════════════════════════════════════════════════"

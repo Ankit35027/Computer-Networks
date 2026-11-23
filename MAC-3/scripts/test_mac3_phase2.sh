@@ -39,7 +39,7 @@ if [ -n "$PF_STATUS" ]; then
     echo "  [PASS] Active isolation rules found for port 3001:"
     echo "$PF_STATUS" | sed 's/^/    /'
 else
-    echo "  [INFO] PF firewall rules not active. Enable with: sudo pfctl -e -f configs/pf_backend_isolation.conf"
+    echo "  [INFO] PF firewall rules not active. Enable with: sudo ./scripts/pf_isolation.sh enable 3001  (repo root)"
 fi
 
 echo ""

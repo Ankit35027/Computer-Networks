@@ -22,7 +22,7 @@ echo ""
 echo "[TEST 1] Attempting Direct Access to Backend A ($BACKEND_A_IP:3001)..."
 if curl -m 3 -sf "http://$BACKEND_A_IP:3001/api/status" 2>/dev/null; then
     echo "  [FAIL/WARNING] Direct access succeeded! Firewall isolation rule is NOT active on Mac 3."
-    echo "                 Mac 3 needs to run: sudo pfctl -e -f configs/pf_backend_isolation.conf"
+    echo "                 Mac 3 needs to run: sudo ./scripts/pf_isolation.sh enable 3001  (repo root)"
 else
     echo "  [PASS] Direct connection BLOCKED or TIMED OUT as expected!"
     echo "         Mac 3 firewall successfully dropped direct unauthorized client access."
