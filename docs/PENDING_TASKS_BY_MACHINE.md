@@ -1,154 +1,148 @@
-# Computer Networks Course Project - Machine-by-Machine Pending Tasks Checklist
+# Computer Networks Course Project — Team Task & Review 2 Execution Checklist
+## Private Network Service Platform — Phase 2: Harden, Recover, and Troubleshoot
 
 **Project Title**: Edge Reverse Proxy, Load Balancer & High-Availability Infrastructure  
 **Target Domain**: `app.team1.test` | `api.team1.test` | `team1.test`  
-**Current Date**: October 2026  
+**Subnet Range**: `10.7.0.0/19` (Netmask: `255.255.224.0`, Gateway: `10.7.0.1`)  
 
 ---
 
-## 🖥️ Mac 1: Primary DNS Server
+## 🖥️ Live Team IP & Hardware Role Matrix
+
+| Machine Directory | Hardware Role | Assigned LAN IPv4 | Bound Ports | Primary Services |
+|---|---|---|---|---|
+| **[`MAC-1/`](../MAC-1/)** | Primary DNS Server & Client | `10.7.21.249` | `53/UDP`, `53/TCP` | `dnsmasq` Primary DNS Resolver (TTL: 30s) |
+| **[`MAC-2/`](../MAC-2/)** | Edge Proxy & Load Balancer | `10.7.23.158` | `8443/TCP`, `80/TCP` | `nginx` + TLS 1.3 Reverse Proxy & HA Passive Health Monitor |
+| **[`MAC-3/`](../MAC-3/)** | Backend A, Backup DNS & Standby Edge | `10.7.22.2` | `3001/TCP`, `53/UDP`, `8443/TCP` | Node.js REST API (`server.js`), Backup `dnsmasq`, Standby `nginx` |
+| **[`MAC-4/`](../MAC-4/)** | Backend B & Client Node | `10.7.21.68` | `3002/TCP` | Node.js / Python REST API, Automated Client Evaluation Suite |
+
+---
+
+## 🖥️ Mac 1: Primary DNS Server Checklist
 
 > **Role**: Primary Authoritative & Recursive DNS Resolver for Team 1.
 
-### 📋 Setup & Deployment Checklist
-- [ ] **Install `dnsmasq`**:
+### 📋 Setup & Phase 2 Actions
+- [x] **Deploy `dnsmasq.conf`**: Configured with `local-ttl=30` and mapping `app.team1.test -> 10.7.23.158`.
+- [x] **Primary Service Starter**:
   ```bash
-  brew install dnsmasq
+  cd MAC-1
+  sudo ./scripts/phase2_dns_failover_demo.sh start
   ```
-- [ ] **Copy Configuration**:
-  Copy `configs/dnsmasq_primary.conf` from Mac 2 to Mac 1 at `/opt/homebrew/etc/dnsmasq.conf` or `/etc/dnsmasq.conf`.
-- [ ] **Configure Static LAN IP**:
-  Assign static IPv4 address (e.g., `10.7.8.10`) on network interface `en0`.
-- [ ] **Verify Domain Mapping Rules**:
-  Ensure the following records exist in `dnsmasq_primary.conf`:
-  ```conf
-  address=/app.team1.test/10.7.8.201
-  address=/api.team1.test/10.7.8.201
-  address=/team1.test/10.7.8.201
-  local-ttl=30
-  ```
-- [ ] **Start Service**:
+- [x] **Phase 2 Extension A Demo (Primary DNS Outage Simulation)**:
   ```bash
-  sudo brew services start dnsmasq
-  # Or run directly:
-  sudo dnsmasq -C configs/dnsmasq_primary.conf -d
+  sudo ./scripts/phase2_dns_failover_demo.sh stop
+  # Verify client resolves via Mac 3 backup DNS!
+  # Restart when done:
+  sudo ./scripts/phase2_dns_failover_demo.sh start
   ```
-- [ ] **Verification Command**:
+- [x] **Phase 2 Extension B & E Demo (Record Cutover Simulation)**:
   ```bash
-  dig @127.0.0.1 app.team1.test
+  # Change DNS to point to Standby Edge (Mac 3):
+  sudo ./scripts/phase2_ttl_cutover_demo.sh cutover-standby
+  # Restore to Primary Edge (Mac 2):
+  sudo ./scripts/phase2_ttl_cutover_demo.sh restore-primary
   ```
 
 ---
 
-## 🖥️ Mac 2: Edge Reverse Proxy & Load Balancer (Your Machine)
+## 🖥️ Mac 2: Edge Reverse Proxy & Load Balancer Checklist
 
 > **Role**: TLS Termination Gateway, HTTP/2 Server, Upstream Load Balancer, and Health Monitor.
 
-### 📋 Setup & Deployment Checklist
-- [x] **Install Nginx**: Completed via Homebrew (`brew install nginx`).
-- [x] **Generate Root CA & SAN SSL Certs**: Generated in `certs/` for `*.team1.test`.
-- [x] **Nginx Configured & Tested**: Configured in `configs/nginx.conf` with HTTPS port `8443`, HTTP/2, ETag caching, and passive health checks.
-- [ ] **Add Local Domain Mapping & Trust CA**:
-  Run in terminal:
+### 📋 Setup & Phase 2 Actions
+- [x] **Install Nginx & Certificates**: Local Root CA (`ca.crt`) and SAN SSL certificate (`server.crt`).
+- [x] **Start Nginx with Upstream Pool & Passive Health Checks (Extension D)**:
   ```bash
-  echo "127.0.0.1 app.team1.test api.team1.test team1.test" | sudo tee -a /etc/hosts
-  sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt
+  cd MAC-2
+  ./scripts/start_nginx.sh start
   ```
-- [ ] **Update Upstream Cluster IPs (When Multi-Mac LAN Active)**:
-  When Mac 3 and Mac 4 are connected on LAN, edit `configs/nginx.conf` lines 42–43:
-  ```nginx
-  upstream backend_cluster {
-      server <Mac3_IP>:3001 max_fails=1 fail_timeout=3s;
-      server <Mac4_IP>:3002 max_fails=1 fail_timeout=3s;
-  }
-  ```
-- [ ] **Save Wireshark Capture Evidence Files (`.pcapng`)**:
-  Open Wireshark on Mac 2 during test runs and save captures to `evidence/`:
-  - `dns_query.pcapng` (filter: `dns`)
-  - `tcp_3way_handshake.pcapng` (filter: `tcp.flags.syn == 1`)
-  - `tls_handshake.pcapng` (filter: `tls`)
-- [ ] **Run Pre-Demo Verification**:
+- [x] **Run Phase 2 Extensions Master Demonstration**:
   ```bash
-  ./scripts/test_endpoints.sh
-  ./scripts/run_failure_tests.sh
+  ./scripts/run_phase2_extensions.sh
+  ```
+- [x] **Extension F Faculty Fault Troubleshooting**:
+  ```bash
+  ./scripts/troubleshoot_fault.sh
   ```
 
 ---
 
-## 🖥️ Mac 3: Secondary DNS Backup, Upstream Backend A & Standby Edge
+## 🖥️ Mac 3: Backend A, Backup DNS & Standby Edge Checklist
 
-> **Role**: Backup DNS Server (Extension A), Upstream Application Server A (Port 3001), Service Isolation Node (Extension C), and Standby Edge Proxy (Extension E).
+> **Role**: Upstream REST API (Port 3001), Backup DNS Resolver (Ext A), Service Isolation Firewall (Ext C), Standby Edge Proxy (Ext E).
 
-### 📋 Setup & Deployment Checklist
-- [ ] **Install `dnsmasq` & Python 3**:
+### 📋 Setup & Phase 2 Actions
+- [x] **Launch All Services via Master Script**:
   ```bash
-  brew install dnsmasq python3
+  cd MAC-3
+  sudo ./start-all.sh
   ```
-- [ ] **Deploy Backup DNS Resolver (Extension A)**:
-  Copy `configs/dnsmasq_backup.conf` to Mac 3 and start `dnsmasq`:
+- [x] **Verify Individual Components**:
   ```bash
+  # 1. Start Backend A
+  node server.js
+  # 2. Start Backup DNS (Extension A)
   sudo dnsmasq -C configs/dnsmasq_backup.conf -d
+  # 3. Apply PF Firewall Service Isolation (Extension C)
+  sudo pfctl -e -f configs/pf_backend_isolation.conf
+  # 4. Start Standby Edge (Extension E)
+  sudo nginx -c $(pwd)/configs/nginx.conf
   ```
-- [ ] **Deploy REST Application Server A**:
-  Copy `backends/backend_a.py` and helper `scripts/start_backends.sh` to Mac 3. Start Backend A:
+- [x] **Run Local Phase 2 Verification**:
   ```bash
-  python3 backends/backend_a.py --port 3001
+  ./scripts/test_mac3_phase2.sh
   ```
-- [ ] **Apply Service Isolation Firewall Rules (Extension C)**:
-  Apply Packet Filter (`pf`) rules on Mac 3 to block direct external traffic to port 3001 except from Mac 2 (`10.7.8.201`):
+- [x] **Firewall Rollback After Evaluation**:
+  ```bash
+  sudo pfctl -d
+  ```
+
+---
+
+## 🖥️ Mac 4: Backend B & Client Evaluation Node Checklist
+
+> **Role**: Upstream REST API (Port 3002) and Primary Client Demonstration Runner.
+
+### 📋 Setup & Phase 2 Actions
+- [x] **Start Backend Server B**:
+  ```bash
+  cd MAC-4
+  ./backend/start_backend.sh
+  ```
+- [x] **Apply Service Isolation Firewall (Extension C)**:
   ```bash
   sudo pfctl -e -f configs/pf_backend_isolation.conf
   ```
-- [ ] **Configure Standby Edge Proxy (Extension E)**:
-  Install Nginx on Mac 3 with identical `nginx.conf` to prepare for DNS cutover demonstration.
-- [ ] **Trust Root CA Certificate**:
+- [x] **Configure Multi-Resolver DNS (Primary 10.7.21.249 + Backup 10.7.22.2)**:
   ```bash
-  sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt
+  ./client/setup_phase2_dns.sh
   ```
+- [x] **Run Complete Phase 2 Interactive Evaluation**:
+  ```bash
+  ./client/run_phase2_evaluation.sh
+  ```
+- [x] **Individual Extension Client Scripts**:
+  - `Extension A (Backup DNS)`: `./client/test_phase2_backup_dns.sh`
+  - `Extension B (DNS TTL & Cache Invalidation)`: `./client/test_phase2_ttl_cutover.sh`
+  - `Extension C (Service Isolation Verification)`: `./client/test_phase2_firewall_isolation.sh`
+  - `Extension D (HA Failover Stream)`: `./client/test_phase2_ha_failover.sh 10`
+  - `Extension E (Edge Cutover Status)`: `./client/test_phase2_edge_migration.sh`
 
 ---
 
-## 🖥️ Mac 4: Upstream Backend B & Client Evaluation Node
-
-> **Role**: Upstream Application Server B (Port 3002) and Primary Evaluation Client Node.
-
-### 📋 Setup & Deployment Checklist
-- [ ] **Install Python 3 & `curl`**:
-  Ensure standard Python 3 runtime is available.
-- [ ] **Deploy REST Application Server B**:
-  Copy `backends/backend_b.py` to Mac 4. Start Backend B:
-  ```bash
-  python3 backends/backend_b.py --port 3002
-  ```
-- [ ] **Configure Client DNS Resolver Order**:
-  In macOS Network Settings (or `/etc/resolv.conf`), set:
-  - **Primary DNS**: `<Mac1_IP>` (e.g. `10.7.8.10`)
-  - **Secondary DNS**: `<Mac3_IP>` (e.g. `10.7.8.30`)
-- [ ] **Trust Root CA Certificate**:
-  ```bash
-  sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt
-  ```
-- [ ] **Verify End-to-End Client Connectivity**:
-  Execute test commands from Mac 4 towards Mac 2 Edge Proxy:
-  ```bash
-  dig app.team1.test
-  curl https://app.team1.test:8443/api/status
-  ```
-
----
-
-## 🎯 Final Demonstration Checklist (Section 8 Sequence)
+## 🎯 Review 2 Demonstration Sequence (11 Evaluation Steps)
 
 | Step # | Evaluator Expectation | Target Machine | Execution Command |
 |---|---|---|---|
 | **1** | Topology & IP Map | All | Display `ARCHITECTURE.md` |
-| **2** | LAN Ping Connectivity | Mac 4 | `ping <Mac1_IP>`, `ping <Mac2_IP>`, `ping <Mac3_IP>` |
-| **3** | Private DNS Lookup | Mac 4 | `dig app.team1.test` (resolves to Mac 2 IP) |
+| **2** | LAN Ping Connectivity | Mac 4 | `./network/ping_team.sh` |
+| **3** | Private DNS Lookup | Mac 4 | `dig app.team1.test` (resolves to `10.7.23.158`) |
 | **4** | HTTPS Connection (No Warning) | Mac 4 | `curl https://app.team1.test:8443/api/status` |
-| **5** | Load Balancing Alternation | Mac 4 | Run 10x curl requests, observe `X-Backend: A` / `B` |
-| **6** | Wireshark Protocol Flow | Mac 2 | Open `.pcapng` files in Wireshark (DNS, TCP 3-way, TLS SNI) |
-| **7** | HTTP Caching & 304 | Mac 4 | `curl -i -H "If-None-Match: <etag>" https://app.team1.test:8443/cached` |
-| **8** | Fail Backend A | Mac 3 / Mac 2 | Kill `backend_a.py` on Mac 3; verify traffic routes to Backend B |
-| **9** | Phase 2 Extensions (DNS / HA) | Mac 1 & 3 | Stop Mac 1 DNS; verify fallback to Mac 3 backup DNS |
-| **10**| Faculty Fault Diagnosis | Mac 2 | Run `./scripts/troubleshoot_fault.sh` layer-by-layer |
-| **11**| Individual Viva Q&A | All | Answer theoretical questions on OSI, TLS, DNS, HA |
+| **5** | Load Balancing Alternation | Mac 4 | `./client/test_load_balancing.sh` (alternates A & B) |
+| **6** | Wireshark Protocol Flow | Mac 2 / Mac 4 | Point out DNS query, TCP 3-way, TLS SNI in Wireshark |
+| **7** | HTTP Caching & 304 | Mac 4 | `./client/test_caching.sh` |
+| **8** | Fail Backend A & Recovery | Mac 3 / Mac 4 | Kill `server.js` on Mac 3; run `./client/test_phase2_ha_failover.sh` |
+| **9** | Primary DNS Failure & Backup Resolver | Mac 1 / Mac 4 | Stop Mac 1 DNS; run `./client/test_phase2_backup_dns.sh` |
+| **10**| Service Isolation (Firewall Protection)| Mac 3 / Mac 4 | Run `./client/test_phase2_firewall_isolation.sh` |
+| **11**| Faculty Fault Diagnosis & Viva | All | Run `./scripts/troubleshoot_fault.sh` & answer viva questions |

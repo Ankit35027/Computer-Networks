@@ -46,11 +46,23 @@ else
     echo "  -> ACTION: Check './scripts/start_nginx.sh status' or python fallback proxy."
 fi
 
-echo -n "  Checking Backend A Port 3001... "
-nc -z -w 2 127.0.0.1 3001 2>/dev/null && echo "CONNECTED" || echo "DOWN / BLOCKED"
+echo "  Checking Backend A Port 3001 (Local & LAN 10.7.22.2)..."
+if nc -z -w 2 10.7.22.2 3001 2>/dev/null; then
+    echo "    [PASS] LAN Backend A (10.7.22.2:3001) CONNECTED"
+elif nc -z -w 2 127.0.0.1 3001 2>/dev/null; then
+    echo "    [PASS] Local Backend A (127.0.0.1:3001) CONNECTED"
+else
+    echo "    [FAIL] Backend A DOWN or BLOCKED by firewall"
+fi
 
-echo -n "  Checking Backend B Port 3002... "
-nc -z -w 2 127.0.0.1 3002 2>/dev/null && echo "CONNECTED" || echo "DOWN / BLOCKED"
+echo "  Checking Backend B Port 3002 (Local & LAN 10.7.21.68)..."
+if nc -z -w 2 10.7.21.68 3002 2>/dev/null; then
+    echo "    [PASS] LAN Backend B (10.7.21.68:3002) CONNECTED"
+elif nc -z -w 2 127.0.0.1 3002 2>/dev/null; then
+    echo "    [PASS] Local Backend B (127.0.0.1:3002) CONNECTED"
+else
+    echo "    [FAIL] Backend B DOWN or BLOCKED by firewall"
+fi
 
 # ------------------------------------------------------------------------------
 # STEP 3: TLS / Session Layer Inspection (Layer 5/6 - TLS Handshake)

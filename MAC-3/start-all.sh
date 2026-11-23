@@ -72,6 +72,10 @@ fi
 # ── 4. Standby Edge (Extension E) ────────────────────────────────────────────
 echo ""
 echo "▶  [4/4] Starting Standby Edge nginx (ports 8080/8443)..."
+sed -i '' "s|ssl_certificate .*;|ssl_certificate \"$SCRIPT_DIR/certs/app.team1.test.crt\";|g" "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null || true
+sed -i '' "s|ssl_certificate_key .*;|ssl_certificate_key \"$SCRIPT_DIR/certs/app.team1.test.key\";|g" "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null || true
+sed -i '' "s|include .*mime.types;|include \"$SCRIPT_DIR/configs/mime.types\";|g" "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null || true
+
 if command -v nginx > /dev/null 2>&1; then
     if sudo nginx -t -c "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null; then
         sudo nginx -c "$SCRIPT_DIR/configs/nginx.conf"
