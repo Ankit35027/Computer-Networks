@@ -41,13 +41,23 @@ class BackendBHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("X-Backend", BACKEND_ID)
         self.send_header("Server", "Backend-B/Mac4")
 
+    # HEAD = same status + headers as GET, but no body (needed for `curl -I`).
+    # Without this, Python's BaseHTTPRequestHandler answers HEAD with 501.
+    def do_HEAD(self):
+        self._is_head = True
+        self.do_GET()
+
+    def _write_body(self, body):
+        if not getattr(self, "_is_head", False):
+            self.wfile.write(body)
+
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
         timestamp = datetime.now(timezone.utc).isoformat()
         client_ip = self.client_address[0]
 
-        print(f"[{timestamp}] [Backend B] GET {path} from {client_ip}")
+        print(f"[{timestamp}] [Backend B] {self.command} {path} from {client_ip}", flush=True)
 
         # 1. GET / - Basic confirmation + Task F Caching
         if path == "/":
@@ -73,7 +83,7 @@ class BackendBHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("ETag", CACHE_ETAG)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            self._write_body(body)
             return
 
         # 2. GET /api/status - Status endpoint (Exact match for faculty spec)
@@ -87,7 +97,7 @@ class BackendBHandler(http.server.BaseHTTPRequestHandler):
             self.send_cors_and_common_headers(200)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            self._write_body(body)
             return
 
         # 3. GET /cached or /api/cached - HTTP Caching (Task F / Step 7)
@@ -109,7 +119,7 @@ class BackendBHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("ETag", CACHE_ETAG)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            self._write_body(body)
             return
 
         # 404 Not Found
@@ -117,7 +127,7 @@ class BackendBHandler(http.server.BaseHTTPRequestHandler):
         self.send_cors_and_common_headers(404)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        self._write_body(body)
 
 class ReusableTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
