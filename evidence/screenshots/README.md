@@ -47,3 +47,4 @@ Prefix = stage / extension. Matching text logs and pcaps are in each `MAC-X/evid
 | ExtE_02_Mac3_backup_DNS_cutover_003204 | Backup DNS changed too (both servers must agree) at 00:32:04 |
 | ExtE_03_Mac3_backup_DNS_restored_003233 | Backup restored to 10.7.31.100 |
 | ExtE_04_Mac1_DNS_restored_003251 | Primary restored to 10.7.31.100 |
+| **ExtBE_05_Mac4_TTL_cutover_mac2_to_mac3_and_flush_demo** | **Key Ext B + E evidence.** 00:32:00 DNS server already new (10.7.13.57) while client cache still old → still served by mac2-primary; 00:32:03+ served by mac3-standby (same cert, no errors). After restore at 00:32:52 cache is stale (mac3-standby) → manual flush → 00:32:54 instantly back on mac2-primary. Log: `MAC-4/evidence/phase2/extBE_ttl_cutover_20261124_0030.log` |
