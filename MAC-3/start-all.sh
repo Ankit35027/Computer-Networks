@@ -72,16 +72,13 @@ fi
 # ── 4. Standby Edge (Extension E) ────────────────────────────────────────────
 echo ""
 echo "▶  [4/4] Starting Standby Edge nginx (ports 8080/8443)..."
-sed -i '' "s|ssl_certificate .*;|ssl_certificate \"$SCRIPT_DIR/certs/app.team1.test.crt\";|g" "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null || true
-sed -i '' "s|ssl_certificate_key .*;|ssl_certificate_key \"$SCRIPT_DIR/certs/app.team1.test.key\";|g" "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null || true
-sed -i '' "s|include .*mime.types;|include \"$SCRIPT_DIR/configs/mime.types\";|g" "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null || true
 
 if command -v nginx > /dev/null 2>&1; then
-    if sudo nginx -t -c "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null; then
-        sudo nginx -c "$SCRIPT_DIR/configs/nginx.conf"
+    if nginx -t -c "$SCRIPT_DIR/configs/nginx.conf" 2>/dev/null; then
+        nginx -c "$SCRIPT_DIR/configs/nginx.conf"
         echo "   ✅ nginx standby edge started"
     else
-        echo "   ❌ nginx config test failed – run:  sudo nginx -t -c configs/nginx.conf"
+        echo "   ❌ nginx config test failed – run:  nginx -t -c configs/nginx.conf"
     fi
 else
     echo "   ⚠️  nginx not found. Install with:  brew install nginx"
@@ -93,5 +90,5 @@ echo "  All services launched. To stop:"
 echo "    Backend A  →  kill \$(lsof -ti:3001)"
 echo "    dnsmasq    →  sudo pkill dnsmasq"
 echo "    pf rules   →  sudo ../scripts/pf_isolation.sh disable"
-echo "    nginx      →  sudo nginx -s stop"
+echo "    nginx      →  nginx -s stop -c $SCRIPT_DIR/configs/nginx.conf"
 echo "═══════════════════════════════════════════════════════════════════════════"

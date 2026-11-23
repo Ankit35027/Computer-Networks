@@ -27,6 +27,8 @@ check MAC-1/configs/dnsmasq.conf        "$MAC2_IP" '^address=/(app\.|api\.)?team
 check MAC-3/configs/dnsmasq_backup.conf "$MAC2_IP" '^address=/(app\.|api\.)?team1\.test/' "backup DNS records -> edge"
 check MAC-2/configs/nginx.conf          "$MAC3_IP" 'server .*:3001'                   "upstream Backend A"
 check MAC-2/configs/nginx.conf          "$MAC4_IP" 'server .*:3002'                   "upstream Backend B"
+check MAC-3/configs/nginx.conf          "$MAC3_IP" 'server .*:3001'                   "standby upstream Backend A"
+check MAC-3/configs/nginx.conf          "$MAC4_IP" 'server .*:3002'                   "standby upstream Backend B"
 
 if [ "$1" = "--live" ]; then
     ME=$(ipconfig getifaddr en0 2>/dev/null)
