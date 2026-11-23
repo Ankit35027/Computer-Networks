@@ -1,0 +1,12 @@
+== BEFORE 23:52:35: both servers answer
+primary 10.7.5.14  -> 10.7.31.100
+backup  10.7.13.57 -> 10.7.31.100
+== AFTER 23:53:53: primary stopped
+primary -> timed out
+backup  -> 10.7.31.100
+-- system resolver (lists Mac1 + Mac3):
+name: app.team1.test
+ip_address: 10.7.31.100
+
+-- full HTTPS request:
+code=200 ip=10.7.31.100 time=0.333731s
