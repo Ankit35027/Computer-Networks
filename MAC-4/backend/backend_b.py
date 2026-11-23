@@ -35,11 +35,13 @@ def etag_matches(if_none_match, etag):
     return any(tag.strip().replace("W/", "") == wanted for tag in if_none_match.split(","))
 
 class BackendBHandler(http.server.BaseHTTPRequestHandler):
+    # One Server header only (send_response() adds it automatically from these)
+    server_version = "Backend-B/Mac4"
+    sys_version = ""
     def send_cors_and_common_headers(self, status_code=200, content_type="application/json"):
         self.send_response(status_code)
         self.send_header("Content-Type", content_type)
         self.send_header("X-Backend", BACKEND_ID)
-        self.send_header("Server", "Backend-B/Mac4")
 
     # HEAD = same status + headers as GET, but no body (needed for `curl -I`).
     # Without this, Python's BaseHTTPRequestHandler answers HEAD with 501.
